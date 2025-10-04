@@ -19,7 +19,8 @@
       "Bash(npm init:*)",
       "Bash(npm run dev:*)",
       "Bash(awk:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
