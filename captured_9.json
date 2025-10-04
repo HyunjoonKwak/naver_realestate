@@ -1,0 +1,125 @@
+{
+  "complexTypeName": "아파트",
+  "complexType": "A01",
+  "complexName": "시범반도유보라아이비파크4.0",
+  "complexNo": "109208",
+  "totalHouseHoldCount": 740,
+  "totalDongCount": 6,
+  "useApproveYmd": "20180129",
+  "minArea": 114.58,
+  "maxArea": 130.55,
+  "minPrice": 104000,
+  "maxPrice": 140000,
+  "minLeasePrice": 50000,
+  "maxLeasePrice": 70000,
+  "minPriceByLetter": "10억 4,000",
+  "maxPriceByLetter": "14억",
+  "minLeasePriceByLetter": "5억",
+  "maxLeasePriceByLetter": "7억",
+  "leasePerDealRate": 0.0,
+  "isaleDealRestrictionCode": "N",
+  "rebuildMembershipTransYn": "N",
+  "livingResidenceYn": "N",
+  "latitude": 37.19921,
+  "longitude": 127.114233,
+  "realPrice": {
+    "tradeType": "A1",
+    "tradeYear": "2025",
+    "tradeMonth": 9,
+    "tradeDate": "27",
+    "dealPrice": 104000,
+    "floor": 4,
+    "representativeArea": 130.0,
+    "exclusiveArea": 96.7283,
+    "formattedPrice": "10억 4,000",
+    "formattedTradeYearMonth": "2025.09.27"
+  },
+  "pyeongs": [
+    {
+      "pyeongNo": 1,
+      "supplyAreaDouble": 114.58,
+      "supplyArea": "114.58",
+      "pyeongName": "114B",
+      "pyeongName2": "34B",
+      "exclusiveArea": "84.83",
+      "exclusivePyeong": "25.66"
+    },
+    {
+      "pyeongNo": 2,
+      "supplyAreaDouble": 115.02,
+      "supplyArea": "115.02",
+      "pyeongName": "115A",
+      "pyeongName2": "34A",
+      "exclusiveArea": "84.97",
+      "exclusivePyeong": "25.7"
+    },
+    {
+      "pyeongNo": 3,
+      "supplyAreaDouble": 115.11,
+      "supplyArea": "115.11",
+      "pyeongName": "115C",
+      "pyeongName2": "34C",
+      "exclusiveArea": "84.56",
+      "exclusivePyeong": "25.57"
+    },
+    {
+      "pyeongNo": 4,
+      "supplyAreaDouble": 130.55,
+      "supplyArea": "130.55",
+      "pyeongName": "130",
+      "pyeongName2": "39",
+      "exclusiveArea": "96.72",
+      "exclusivePyeong": "29.25"
+    }
+  ],
+  "dongs": [
+    {
+      "dongNo": "1",
+      "bildName": "1501",
+      "highFloor": 0,
+      "lowFloor": 0,
+      "sortNo": "41501"
+    },
+    {
+      "dongNo": "2",
+      "bildName": "1502",
+      "highFloor": 0,
+      "lowFloor": 0,
+      "sortNo": "41502"
+    },
+    {
+      "dongNo": "3",
+      "bildName": "1503",
+      "highFloor": 0,
+      "lowFloor": 0,
+      "sortNo": "41503"
+    },
+    {
+      "dongNo": "4",
+      "bildName": "1504",
+      "highFloor": 0,
+      "lowFloor": 0,
+      "sortNo": "41504"
+    },
+    {
+      "dongNo": "5",
+      "bildName": "1505",
+      "highFloor": 0,
+      "lowFloor": 0,
+      "sortNo": "41505"
+    },
+    {
+      "dongNo": "6",
+      "bildName": "1506",
+      "highFloor": 0,
+      "lowFloor": 0,
+      "sortNo": "41506"
+    }
+  ],
+  "complexExistTabs": [
+    "detail",
+    "prices",
+    "buildingLandprice",
+    "schools"
+  ]
+}

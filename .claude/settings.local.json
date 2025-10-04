@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker-compose:*)",
+      "Bash(tree:*)",
+      "Bash(backend/venv/bin/pip install:*)",
+      "Bash(backend/venv/bin/playwright install:*)",
+      "Bash(backend/venv/bin/python:*)",
+      "Bash(backend/venv/bin/pip:*)",
+      "Bash(cat:*)",
+      "Bash(timeout 60 backend/venv/bin/python backend/app/crawler/naver_land_crawler.py)",
+      "Bash(venv/bin/uvicorn:*)",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Bash(chmod:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

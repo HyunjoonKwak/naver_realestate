@@ -1,0 +1,218 @@
+[
+  {
+    "url": "https://new.land.naver.com/complexes",
+    "method": "GET",
+    "headers": {
+      "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+      "upgrade-insecure-requests": "1",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\""
+    }
+  },
+  {
+    "url": "https://new.land.naver.com/property-dtd.js",
+    "method": "GET",
+    "headers": {
+      "accept": "*/*",
+      "cookie": "REALESTATE=Sat%20Oct%2004%202025%2011%3A34%3A29%20GMT%2B0900%20(Korean%20Standard%20Time); PROP_TEST_KEY=1759545269283.1d78a13440487cf3be8493ad36154f44e884a6ca3939bf7b90cf4a4aa89f4cee; PROP_TEST_ID=d98e8662fb16aef405a7d6c3a4cb27499aa67efe90ef1cbced47372b637704ef",
+      "referer": "https://new.land.naver.com/complexes",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\""
+    }
+  },
+  {
+    "url": "https://new.land.naver.com/common/css/prismplayer-pc.css",
+    "method": "GET",
+    "headers": {
+      "accept": "text/css,*/*;q=0.1",
+      "cookie": "REALESTATE=Sat%20Oct%2004%202025%2011%3A34%3A29%20GMT%2B0900%20(Korean%20Standard%20Time); PROP_TEST_KEY=1759545269283.1d78a13440487cf3be8493ad36154f44e884a6ca3939bf7b90cf4a4aa89f4cee; PROP_TEST_ID=d98e8662fb16aef405a7d6c3a4cb27499aa67efe90ef1cbced47372b637704ef",
+      "referer": "https://new.land.naver.com/complexes",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\""
+    }
+  },
+  {
+    "url": "https://oapi.map.naver.com/openapi/maps3.js?submodules=panorama",
+    "method": "GET",
+    "headers": {
+      "accept": "*/*",
+      "referer": "https://new.land.naver.com/complexes",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\""
+    }
+  },
+  {
+    "url": "https://new.land.naver.com/si",
+    "method": "GET",
+    "headers": {
+      "accept": "*/*",
+      "cookie": "REALESTATE=Sat%20Oct%2004%202025%2011%3A34%3A29%20GMT%2B0900%20(Korean%20Standard%20Time); PROP_TEST_KEY=1759545269283.1d78a13440487cf3be8493ad36154f44e884a6ca3939bf7b90cf4a4aa89f4cee; PROP_TEST_ID=d98e8662fb16aef405a7d6c3a4cb27499aa67efe90ef1cbced47372b637704ef",
+      "referer": "https://new.land.naver.com/complexes",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\""
+    }
+  },
+  {
+    "url": "https://oapi.map.naver.com/openapi/maps3-panorama.js",
+    "method": "GET",
+    "headers": {
+      "accept": "*/*",
+      "referer": "https://new.land.naver.com/complexes",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\""
+    }
+  },
+  {
+    "url": "https://sentry-fin.naver.com/api/97/envelope/?sentry_key=fa86ed004bb0411ea9e3de5a8ff08224&sentry_version=7",
+    "method": "POST",
+    "headers": {
+      "accept": "*/*",
+      "content-type": "text/plain;charset=UTF-8",
+      "origin": "https://new.land.naver.com",
+      "referer": "https://new.land.naver.com/",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\""
+    }
+  },
+  {
+    "url": "https://new.land.naver.com/nelo",
+    "method": "POST",
+    "headers": {
+      "accept": "application/json, text/plain, */*",
+      "content-type": "application/json;charset=UTF-8",
+      "cookie": "REALESTATE=Sat%20Oct%2004%202025%2011%3A34%3A29%20GMT%2B0900%20(Korean%20Standard%20Time); PROP_TEST_KEY=1759545269283.1d78a13440487cf3be8493ad36154f44e884a6ca3939bf7b90cf4a4aa89f4cee; PROP_TEST_ID=d98e8662fb16aef405a7d6c3a4cb27499aa67efe90ef1cbced47372b637704ef",
+      "origin": "https://new.land.naver.com",
+      "referer": "https://new.land.naver.com/complexes?ms=0,0,0&a=APT:ABYG:JGC:PRE&e=RETAIL",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\""
+    }
+  },
+  {
+    "url": "https://sentry-fin.naver.com/api/97/envelope/?sentry_key=fa86ed004bb0411ea9e3de5a8ff08224&sentry_version=7",
+    "method": "POST",
+    "headers": {
+      "accept": "*/*",
+      "content-type": "text/plain;charset=UTF-8",
+      "origin": "https://new.land.naver.com",
+      "referer": "https://new.land.naver.com/",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\""
+    }
+  },
+  {
+    "url": "https://sentry-fin.naver.com/api/97/envelope/?sentry_key=fa86ed004bb0411ea9e3de5a8ff08224&sentry_version=7",
+    "method": "POST",
+    "headers": {
+      "accept": "*/*",
+      "content-type": "text/plain;charset=UTF-8",
+      "origin": "https://new.land.naver.com",
+      "referer": "https://new.land.naver.com/",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\""
+    }
+  },
+  {
+    "url": "https://new.land.naver.com/api/developmentplan/road/list?zoom=16&leftLon=127.0916661&rightLon=127.1191319&topLat=37.3651132&bottomLat=37.3540272",
+    "method": "GET",
+    "headers": {
+      "accept": "*/*",
+      "cookie": "REALESTATE=Sat%20Oct%2004%202025%2011%3A34%3A29%20GMT%2B0900%20(Korean%20Standard%20Time); PROP_TEST_KEY=1759545269283.1d78a13440487cf3be8493ad36154f44e884a6ca3939bf7b90cf4a4aa89f4cee; PROP_TEST_ID=d98e8662fb16aef405a7d6c3a4cb27499aa67efe90ef1cbced47372b637704ef; _fwb=149b6y84cdjLPGXPBTObX3Q.1759545269411",
+      "referer": "https://new.land.naver.com/complexes?ms=37.3595704,127.105399,16&a=APT:ABYG:JGC:PRE&e=RETAIL",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+      "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IlJFQUxFU1RBVEUiLCJpYXQiOjE3NTk1NDUyNjksImV4cCI6MTc1OTU1NjA2OX0.PGgO1Lkl_B8n3N0WJnmO7IOKDXe3RK6hcnjxZ1CmIBQ",
+      "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\""
+    }
+  },
+  {
+    "url": "https://new.land.naver.com/api/developmentplan/rail/list?zoom=16&leftLon=127.0916661&rightLon=127.1191319&topLat=37.3651132&bottomLat=37.3540272",
+    "method": "GET",
+    "headers": {
+      "accept": "*/*",
+      "cookie": "REALESTATE=Sat%20Oct%2004%202025%2011%3A34%3A29%20GMT%2B0900%20(Korean%20Standard%20Time); PROP_TEST_KEY=1759545269283.1d78a13440487cf3be8493ad36154f44e884a6ca3939bf7b90cf4a4aa89f4cee; PROP_TEST_ID=d98e8662fb16aef405a7d6c3a4cb27499aa67efe90ef1cbced47372b637704ef; _fwb=149b6y84cdjLPGXPBTObX3Q.1759545269411",
+      "referer": "https://new.land.naver.com/complexes?ms=37.3595704,127.105399,16&a=APT:ABYG:JGC:PRE&e=RETAIL",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+      "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IlJFQUxFU1RBVEUiLCJpYXQiOjE3NTk1NDUyNjksImV4cCI6MTc1OTU1NjA2OX0.PGgO1Lkl_B8n3N0WJnmO7IOKDXe3RK6hcnjxZ1CmIBQ",
+      "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\""
+    }
+  },
+  {
+    "url": "https://new.land.naver.com/api/developmentplan/jigu/list?zoom=16&leftLon=127.0916661&rightLon=127.1191319&topLat=37.3651132&bottomLat=37.3540272",
+    "method": "GET",
+    "headers": {
+      "accept": "*/*",
+      "cookie": "REALESTATE=Sat%20Oct%2004%202025%2011%3A34%3A29%20GMT%2B0900%20(Korean%20Standard%20Time); PROP_TEST_KEY=1759545269283.1d78a13440487cf3be8493ad36154f44e884a6ca3939bf7b90cf4a4aa89f4cee; PROP_TEST_ID=d98e8662fb16aef405a7d6c3a4cb27499aa67efe90ef1cbced47372b637704ef; _fwb=149b6y84cdjLPGXPBTObX3Q.1759545269411",
+      "referer": "https://new.land.naver.com/complexes?ms=37.3595704,127.105399,16&a=APT:ABYG:JGC:PRE&e=RETAIL",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+      "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IlJFQUxFU1RBVEUiLCJpYXQiOjE3NTk1NDUyNjksImV4cCI6MTc1OTU1NjA2OX0.PGgO1Lkl_B8n3N0WJnmO7IOKDXe3RK6hcnjxZ1CmIBQ",
+      "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\""
+    }
+  },
+  {
+    "url": "https://new.land.naver.com/api/cortars?zoom=16&centerLat=37.3595704&centerLon=127.105399",
+    "method": "GET",
+    "headers": {
+      "accept": "*/*",
+      "cookie": "REALESTATE=Sat%20Oct%2004%202025%2011%3A34%3A29%20GMT%2B0900%20(Korean%20Standard%20Time); PROP_TEST_KEY=1759545269283.1d78a13440487cf3be8493ad36154f44e884a6ca3939bf7b90cf4a4aa89f4cee; PROP_TEST_ID=d98e8662fb16aef405a7d6c3a4cb27499aa67efe90ef1cbced47372b637704ef; _fwb=149b6y84cdjLPGXPBTObX3Q.1759545269411",
+      "referer": "https://new.land.naver.com/complexes?ms=37.3595704,127.105399,16&a=APT:ABYG:JGC:PRE&e=RETAIL",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+      "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IlJFQUxFU1RBVEUiLCJpYXQiOjE3NTk1NDUyNjksImV4cCI6MTc1OTU1NjA2OX0.PGgO1Lkl_B8n3N0WJnmO7IOKDXe3RK6hcnjxZ1CmIBQ",
+      "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\""
+    }
+  },
+  {
+    "url": "https://new.land.naver.com/404",
+    "method": "GET",
+    "headers": {
+      "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+      "cookie": "REALESTATE=Sat%20Oct%2004%202025%2011%3A34%3A29%20GMT%2B0900%20(Korean%20Standard%20Time); PROP_TEST_KEY=1759545269283.1d78a13440487cf3be8493ad36154f44e884a6ca3939bf7b90cf4a4aa89f4cee; PROP_TEST_ID=d98e8662fb16aef405a7d6c3a4cb27499aa67efe90ef1cbced47372b637704ef; _fwb=149b6y84cdjLPGXPBTObX3Q.1759545269411",
+      "referer": "https://new.land.naver.com/complexes?ms=37.3595704,127.105399,16&a=APT:ABYG:JGC:PRE&e=RETAIL",
+      "upgrade-insecure-requests": "1",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\""
+    }
+  },
+  {
+    "url": "https://new.land.naver.com/api/complexes/single-markers/2.0?cortarNo=4113510300&zoom=16&priceType=RETAIL&markerId&markerType&selectedComplexNo&selectedComplexBuildingNo&fakeComplexMarker&realEstateType=APT%3AABYG%3AJGC%3APRE&tradeType=&tag=%3A%3A%3A%3A%3A%3A%3A%3A&rentPriceMin=0&rentPriceMax=900000000&priceMin=0&priceMax=900000000&areaMin=0&areaMax=900000000&oldBuildYears&recentlyBuildYears&minHouseHoldCount&maxHouseHoldCount&showArticle=false&sameAddressGroup=false&minMaintenanceCost&maxMaintenanceCost&directions=&leftLon=127.0916661&rightLon=127.1191319&topLat=37.3651132&bottomLat=37.3540272&isPresale=true",
+    "method": "GET",
+    "headers": {
+      "accept": "*/*",
+      "cookie": "REALESTATE=Sat%20Oct%2004%202025%2011%3A34%3A29%20GMT%2B0900%20(Korean%20Standard%20Time); PROP_TEST_KEY=1759545269283.1d78a13440487cf3be8493ad36154f44e884a6ca3939bf7b90cf4a4aa89f4cee; PROP_TEST_ID=d98e8662fb16aef405a7d6c3a4cb27499aa67efe90ef1cbced47372b637704ef; _fwb=149b6y84cdjLPGXPBTObX3Q.1759545269411",
+      "referer": "https://new.land.naver.com/complexes?ms=37.3595704,127.105399,16&a=APT:ABYG:JGC:PRE&e=RETAIL",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+      "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IlJFQUxFU1RBVEUiLCJpYXQiOjE3NTk1NDUyNjksImV4cCI6MTc1OTU1NjA2OX0.PGgO1Lkl_B8n3N0WJnmO7IOKDXe3RK6hcnjxZ1CmIBQ",
+      "sec-ch-ua": "\"Not=A?Brand\";v=\"24\", \"Chromium\";v=\"140\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\""
+    }
+  }
+]
