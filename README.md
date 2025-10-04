@@ -12,11 +12,16 @@
 - 🗄️ **데이터베이스 저장**: PostgreSQL에 체계적으로 저장
 - 🚀 **REST API**: FastAPI 기반 완전한 API 서버
 - 📈 **통계 분석**: 가격 추이, 면적별 가격, 층별 프리미엄
+- 🎨 **웹 프론트엔드**: Next.js 14 + TypeScript + Tailwind CSS ⭐ NEW
+  - 대시보드 (통계 요약)
+  - 단지 목록 및 상세 페이지
+  - 매물 검색 및 필터링
+  - 실거래가 조회 및 가격 추이 차트
 
 ### 🚧 개발 예정
 - Celery 자동 스케줄링
 - 가격 분석 및 최적 매매 시기 추천
-- Next.js 프론트엔드
+- 알림 기능 (이메일/Slack)
 
 ## 🚀 빠른 시작
 
@@ -41,14 +46,17 @@ cd backend
 venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-브라우저에서 http://localhost:8000/docs 접속하여 API 문서 확인
-
-### 5. 데이터 확인
+### 5. 프론트엔드 시작 (새 터미널)
 ```bash
-backend/venv/bin/python check_data.py
-# 또는 API로 확인
-curl http://localhost:8000/complexes/
+cd frontend
+npm install  # 최초 1회만
+npm run dev
 ```
+
+### 6. 브라우저에서 접속
+- **프론트엔드**: http://localhost:3000 🎨
+- **API 문서**: http://localhost:8000/docs 📖
+- **데이터 확인**: `backend/venv/bin/python check_data.py`
 
 ## 📂 프로젝트 구조
 
@@ -98,17 +106,26 @@ naver_realestate/
 
 ## 📈 현재 상태
 
-**Phase 3 완료** (2025-10-04)
+**Phase 4 완료** (2025-10-04) 🎉
 - 단지: 1개
 - 매물: 20건
 - 실거래: 1건
 - API 엔드포인트: 15+개
+- 프론트엔드 페이지: 5개
 
-### API 엔드포인트
-- ✅ 단지 목록/상세/통계
-- ✅ 매물 검색/필터링
-- ✅ 실거래가 검색/통계
-- ✅ 가격 추이 분석
-- ✅ 면적별/층별 가격 분석
+### 완성된 기능
+**백엔드 (FastAPI)**
+- ✅ 단지 목록/상세/통계 API
+- ✅ 매물 검색/필터링 API
+- ✅ 실거래가 검색/통계 API
+- ✅ 가격 추이 분석 API
+- ✅ 면적별/층별 가격 분석 API
 
-다음 단계: Celery 자동화 스케줄링
+**프론트엔드 (Next.js)**
+- ✅ 대시보드 (홈페이지)
+- ✅ 단지 목록 페이지
+- ✅ 단지 상세 페이지 (차트 포함)
+- ✅ 매물 검색 페이지 (필터 기능)
+- ✅ 실거래가 조회 페이지
+
+**다음 단계**: Celery 자동화 스케줄링

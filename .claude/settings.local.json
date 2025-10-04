@@ -12,7 +12,12 @@
       "Bash(venv/bin/uvicorn:*)",
       "Bash(curl:*)",
       "Bash(python3:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(npx create-next-app:*)",
+      "Bash(yes)",
+      "Bash(sudo chown:*)",
+      "Bash(npm init:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": [],
     "ask": []
