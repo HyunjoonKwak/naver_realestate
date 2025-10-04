@@ -20,7 +20,15 @@
       "Bash(npm run dev:*)",
       "Bash(awk:*)",
       "Bash(xargs:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(python:*)",
+      "Bash(backend/.venv/bin/python reset_db.py:*)",
+      "Bash(backend/.venv/bin/python:*)",
+      "Bash(.venv/bin/python:*)",
+      "Bash(find:*)",
+      "Bash(pkill:*)",
+      "Read(//private/tmp/**)",
+      "Bash(source:*)"
     ],
     "deny": [],
     "ask": []

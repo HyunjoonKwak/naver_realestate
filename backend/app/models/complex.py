@@ -73,6 +73,11 @@ class Article(Base):
     tags = Column(Text, comment="태그 (JSON 배열)")
     realtor_name = Column(String(200), comment="공인중개사")
 
+    # 동일 매물 정보
+    same_addr_cnt = Column(Integer, default=1, comment="동일 매물 수 (중개사 수)")
+    same_addr_max_prc = Column(String(100), comment="동일 매물 최고가")
+    same_addr_min_prc = Column(String(100), comment="동일 매물 최저가")
+
     # 날짜 정보
     confirm_date = Column(String(20), comment="확인일 (YYYYMMDD)")
 

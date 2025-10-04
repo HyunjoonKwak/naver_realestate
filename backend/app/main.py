@@ -4,7 +4,7 @@ FastAPI 메인 애플리케이션
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import complexes, articles, transactions
+from app.api import complexes, articles, scraper
 
 # FastAPI 앱 생성
 app = FastAPI(
@@ -25,9 +25,9 @@ app.add_middleware(
 )
 
 # 라우터 등록
-app.include_router(complexes.router)
-app.include_router(articles.router)
-app.include_router(transactions.router)
+app.include_router(complexes.router, prefix="/api")
+app.include_router(articles.router, prefix="/api")
+app.include_router(scraper.router, prefix="/api")
 
 
 @app.get("/")

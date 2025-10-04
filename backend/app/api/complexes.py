@@ -11,7 +11,8 @@ from app.schemas.complex import (
     ComplexResponse,
     ComplexDetailResponse,
     ArticleResponse,
-    TransactionResponse
+    TransactionResponse,
+    ComplexCreate
 )
 
 router = APIRouter(prefix="/complexes", tags=["complexes"])
@@ -173,4 +174,63 @@ def get_complex_stats(
             "total": total_transactions,
             "recent": TransactionResponse.model_validate(recent_transaction) if recent_transaction else None
         }
+    }
+
+
+@router.post("/", response_model=ComplexResponse)
+def create_complex(
+    complex_data: ComplexCreate,
+    db: Session = Depends(get_db)
+):
+    """
+    새 단지 추가
+
+    - **complex_id**: 네이버 단지 ID (필수)
+    - **complex_name**: 단지명 (필수)
+    - 나머지는 선택 사항
+    """
+    # 중복 체크
+    existing = db.query(Complex).filter(Complex.complex_id == complex_data.complex_id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="이미 존재하는 단지입니다")
+
+    # 새 단지 생성
+    new_complex = Complex(**complex_data.model_dump())
+    db.add(new_complex)
+    db.commit()
+    db.refresh(new_complex)
+
+    return new_complex
+
+
+@router.delete("/{complex_id}")
+def delete_complex(
+    complex_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    단지 삭제 (관련된 모든 매물 및 실거래가 함께 삭제)
+
+    - **complex_id**: 네이버 단지 ID
+    """
+    # 단지 조회
+    complex_obj = db.query(Complex).filter(Complex.complex_id == complex_id).first()
+
+    if not complex_obj:
+        raise HTTPException(status_code=404, detail="단지를 찾을 수 없습니다")
+
+    # 관련된 매물 삭제
+    db.query(Article).filter(Article.complex_id == complex_id).delete()
+
+    # 관련된 실거래가 삭제
+    db.query(Transaction).filter(Transaction.complex_id == complex_id).delete()
+
+    # 단지 삭제
+    db.delete(complex_obj)
+    db.commit()
+
+    return {
+        "message": "단지가 삭제되었습니다",
+        "complex_id": complex_id,
+        "complex_name": complex_obj.complex_name
     }

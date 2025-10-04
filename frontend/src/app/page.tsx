@@ -1,26 +1,32 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { complexAPI, articleAPI, transactionAPI } from '@/lib/api';
-import type { Complex, Article, Transaction } from '@/types';
+import { complexAPI } from '@/lib/api';
+import type { Complex } from '@/types';
 
 export default function Home() {
   const [complexes, setComplexes] = useState<Complex[]>([]);
-  const [recentArticles, setRecentArticles] = useState<Article[]>([]);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [totalArticles, setTotalArticles] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [complexesData, articlesData, transactionsData] = await Promise.all([
-          complexAPI.getList(0, 10),
-          articleAPI.getRecent(5),
-          transactionAPI.getRecent(5),
-        ]);
+        const response = await complexAPI.getAll();
+        const complexesData = response.data;
         setComplexes(complexesData);
-        setRecentArticles(articlesData);
-        setRecentTransactions(transactionsData);
+
+        // 각 단지의 통계를 가져와서 총 매물 수 계산
+        let totalCount = 0;
+        for (const complex of complexesData) {
+          try {
+            const statsRes = await complexAPI.getStats(complex.complex_id);
+            totalCount += statsRes.data.articles.total;
+          } catch (err) {
+            console.log(`단지 ${complex.complex_id} 통계 로딩 실패`);
+          }
+        }
+        setTotalArticles(totalCount);
       } catch (error) {
         console.error('데이터 로딩 실패:', error);
       } finally {
@@ -43,105 +49,70 @@ export default function Home() {
     <div className="space-y-8">
       <div className="bg-white rounded-lg shadow p-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">대시보드</h1>
-        <p className="text-gray-600">네이버 부동산 매물 및 실거래가 관리 시스템</p>
+        <p className="text-gray-600">네이버 부동산 매물 관리 시스템</p>
       </div>
 
       {/* 통계 카드 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="text-sm font-medium text-gray-600">등록된 단지</div>
           <div className="mt-2 text-3xl font-bold text-blue-600">{complexes.length}개</div>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-sm font-medium text-gray-600">활성 매물</div>
-          <div className="mt-2 text-3xl font-bold text-green-600">{recentArticles.length}건</div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-sm font-medium text-gray-600">실거래가</div>
-          <div className="mt-2 text-3xl font-bold text-purple-600">{recentTransactions.length}건</div>
+          <div className="text-sm font-medium text-gray-600">전체 매물</div>
+          <div className="mt-2 text-3xl font-bold text-green-600">{totalArticles}건</div>
         </div>
       </div>
 
       {/* 단지 목록 */}
       <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b">
+        <div className="px-6 py-4 border-b flex justify-between items-center">
           <h2 className="text-xl font-semibold text-gray-900">단지 목록</h2>
+          <a
+            href="/complexes/new"
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
+          >
+            단지 추가
+          </a>
         </div>
-        <div className="divide-y">
-          {complexes.map((complex) => (
+        {complexes.length === 0 ? (
+          <div className="px-6 py-12 text-center">
+            <p className="text-gray-500">등록된 단지가 없습니다.</p>
             <a
-              key={complex.id}
-              href={`/complexes/${complex.complex_id}`}
-              className="block px-6 py-4 hover:bg-gray-50 transition"
+              href="/complexes/new"
+              className="inline-block mt-4 text-blue-600 hover:text-blue-700"
             >
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900">{complex.complex_name}</h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {complex.complex_type} · {complex.total_households}세대 · {complex.total_dongs}개동
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-medium text-blue-600">
-                    {complex.min_price && complex.max_price
-                      ? `${(complex.min_price / 10000).toFixed(1)}억 ~ ${(complex.max_price / 10000).toFixed(1)}억`
-                      : '-'}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">매매가</div>
-                </div>
-              </div>
+              첫 단지를 추가해보세요 →
             </a>
-          ))}
-        </div>
-      </div>
-
-      {/* 최근 매물 */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b">
-          <h2 className="text-xl font-semibold text-gray-900">최근 매물</h2>
-        </div>
-        <div className="divide-y">
-          {recentArticles.map((article) => (
-            <div key={article.id} className="px-6 py-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="text-sm font-medium text-gray-900">
-                    {article.area_name} · {article.floor_info} · {article.direction}
+          </div>
+        ) : (
+          <div className="divide-y">
+            {complexes.map((complex) => (
+              <a
+                key={complex.id}
+                href={`/complexes/${complex.complex_id}`}
+                className="block px-6 py-4 hover:bg-gray-50 transition"
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900">{complex.complex_name}</h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {complex.complex_type || '-'} · {complex.total_households || '-'}세대 · {complex.total_dongs || '-'}개동
+                    </p>
                   </div>
-                  <div className="text-sm text-gray-600 mt-1">{article.building_name}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-lg font-semibold text-blue-600">{article.price}</div>
-                  <div className="text-xs text-gray-500">{article.trade_type}</div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 최근 실거래가 */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b">
-          <h2 className="text-xl font-semibold text-gray-900">최근 실거래가</h2>
-        </div>
-        <div className="divide-y">
-          {recentTransactions.map((transaction) => (
-            <div key={transaction.id} className="px-6 py-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="text-sm font-medium text-gray-900">
-                    {transaction.area}㎡ · {transaction.floor}층
-                  </div>
-                  <div className="text-sm text-gray-600 mt-1">
-                    {transaction.trade_date?.replace(/(\d{4})(\d{2})(\d{2})/, '$1.$2.$3')}
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-blue-600">
+                      {complex.min_price && complex.max_price
+                        ? `${(complex.min_price / 10000).toFixed(1)}억 ~ ${(complex.max_price / 10000).toFixed(1)}억`
+                        : '-'}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">매매가</div>
                   </div>
                 </div>
-                <div className="text-lg font-semibold text-purple-600">{transaction.formatted_price}</div>
-              </div>
-            </div>
-          ))}
-        </div>
+              </a>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

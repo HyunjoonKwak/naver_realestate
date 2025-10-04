@@ -33,17 +33,52 @@ class NaverRealEstateCrawler:
                 # 응답 URL에 따라 데이터 분류
                 url = response.url
 
-                # 단지 상세 정보
+                # 단지 상세 정보 (최초 1회만 저장)
                 if 'complexes/' in url and 'complexNo' in str(data):
-                    self.complex_data = data
-                    print(f"✅ 단지 정보 수집: {data.get('complexName', 'N/A')}")
+                    if self.complex_data is None:
+                        self.complex_data = data
+                        print(f"✅ 단지 정보 수집: {data.get('complexName', 'N/A')}")
 
                 # 매물 목록
                 elif 'articleList' in str(data) and isinstance(data, dict):
                     if 'articleList' in data:
-                        self.articles_data = data
-                        count = len(data.get('articleList', []))
-                        print(f"✅ 매물 정보 수집: {count}건")
+                        # 페이지네이션 정보 출력
+                        total_count = data.get('totalCount', 0)
+                        current_count = len(data.get('articleList', []))
+
+                        # 기존 데이터에 추가 (여러 페이지 수집)
+                        if self.articles_data is None:
+                            self.articles_data = data
+                            # sameAddressGroup 파라미터 확인
+                            same_group = 'sameAddressGroup=true' in url
+                            group_status = "✅ ON" if same_group else "❌ OFF"
+                            print(f"✅ 매물 정보 수집: {current_count}건 (전체: {total_count}건)")
+                            print(f"   동일매물묶기: {group_status}")
+                            print(f"   API URL: {url}")
+                        else:
+                            # 기존 articleList에 새로운 항목 추가 (중복 제거)
+                            existing_articles = self.articles_data.get('articleList', [])
+                            new_articles = data.get('articleList', [])
+                            if len(new_articles) > 0:
+                                # 기존 article_id 세트
+                                existing_ids = {article.get('articleNo') for article in existing_articles}
+
+                                # 중복되지 않은 새 매물만 추가
+                                unique_new_articles = [
+                                    article for article in new_articles
+                                    if article.get('articleNo') not in existing_ids
+                                ]
+
+                                duplicates_count = len(new_articles) - len(unique_new_articles)
+
+                                self.articles_data['articleList'] = existing_articles + unique_new_articles
+                                self.articles_data['totalCount'] = data.get('totalCount', 0)
+                                total = len(self.articles_data['articleList'])
+
+                                if duplicates_count > 0:
+                                    print(f"✅ 추가 매물 수집: +{len(unique_new_articles)}건 (누적: {total}건 / 전체: {total_count}건) [중복 {duplicates_count}건 제거]")
+                                else:
+                                    print(f"✅ 추가 매물 수집: +{current_count}건 (누적: {total}건 / 전체: {total_count}건)")
 
                 # 실거래가 (realPrice 포함)
                 if 'realPrice' in str(data):
@@ -58,6 +93,7 @@ class NaverRealEstateCrawler:
         """특정 단지 크롤링"""
         print(f"\n{'='*80}")
         print(f"🏢 단지 크롤링 시작: {complex_id}")
+        print(f"   [CRITICAL-DEBUG] This is UPDATED code with button clicking - Version 2.0")
         print(f"{'='*80}\n")
 
         # 데이터 초기화
@@ -69,8 +105,14 @@ class NaverRealEstateCrawler:
         async with async_playwright() as p:
             # 브라우저 실행
             browser = await p.chromium.launch(
-                headless=False,  # Bot 탐지 방지
-                args=['--disable-blink-features=AutomationControlled']
+                headless=False,
+                args=[
+                    '--disable-blink-features=AutomationControlled',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu',
+                    '--no-sandbox'
+                ],
+                slow_mo=100  # 느린 동작으로 안정성 향상
             )
 
             context = await browser.new_context(
@@ -82,18 +124,149 @@ class NaverRealEstateCrawler:
             # 응답 리스너 등록
             page.on("response", lambda response: asyncio.create_task(self.save_response(response)))
 
-            # 페이지 이동
+            # 먼저 메인 페이지에 접속해서 localStorage 설정
+            print("   🔧 동일매물묶기 설정 준비 중...")
+            await page.goto("https://new.land.naver.com", wait_until="domcontentloaded")
+
+            # localStorage에 동일매물묶기 설정 저장
+            await page.evaluate("""
+                () => {
+                    // 네이버가 사용하는 localStorage 키 설정
+                    localStorage.setItem('sameAddrYn', 'true');
+                    localStorage.setItem('sameAddressGroup', 'true');
+                    console.log('[LocalStorage] 동일매물묶기 설정 완료');
+                }
+            """)
+
+            print("   ✅ localStorage 설정 완료")
+
+            # 이제 단지 페이지로 이동
             url = f"https://new.land.naver.com/complexes/{complex_id}"
             print(f"🌐 접속: {url}")
 
             await page.goto(url, wait_until="networkidle")
 
             # 페이지 로딩 대기
-            await asyncio.sleep(3)
-
-            # 스크롤하여 추가 데이터 로드
-            await page.evaluate("window.scrollBy(0, 1000)")
             await asyncio.sleep(2)
+
+            # localStorage 확인 및 체크박스 상태 검증
+            storage_check = await page.evaluate("""
+                () => {
+                    const sameAddrYn = localStorage.getItem('sameAddrYn');
+                    const sameAddressGroup = localStorage.getItem('sameAddressGroup');
+
+                    // 체크박스 상태 확인
+                    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+                    let checkboxState = null;
+
+                    for (const checkbox of checkboxes) {
+                        const label = checkbox.closest('label') || checkbox.nextElementSibling;
+                        const text = label ? (label.textContent || label.innerText || '') : '';
+                        if (text.includes('동일매물')) {
+                            checkboxState = {
+                                checked: checkbox.checked,
+                                labelText: text
+                            };
+                            break;
+                        }
+                    }
+
+                    return {
+                        sameAddrYn,
+                        sameAddressGroup,
+                        checkboxState
+                    };
+                }
+            """)
+
+            print(f"   [DEBUG] localStorage 확인: {storage_check}")
+
+            # 체크박스가 체크되지 않았으면 클릭
+            if storage_check.get('checkboxState') and not storage_check['checkboxState'].get('checked'):
+                print("   🔘 체크박스 클릭 중...")
+                await page.evaluate("""
+                    () => {
+                        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+                        for (const checkbox of checkboxes) {
+                            const label = checkbox.closest('label') || checkbox.nextElementSibling;
+                            const text = label ? (label.textContent || label.innerText || '') : '';
+                            if (text.includes('동일매물')) {
+                                checkbox.click();
+                                console.log('[Checkbox] 클릭 완료');
+                                return true;
+                            }
+                        }
+                        return false;
+                    }
+                """)
+
+                # 데이터 초기화 후 재로딩 대기
+                print("   [DEBUG] 체크박스 클릭 완료, 데이터 초기화...")
+                self.articles_data = None
+                self.complex_data = None
+                await asyncio.sleep(3)
+                print("   ✅ 동일매물묶기 활성화 완료")
+            else:
+                print("   ✅ 동일매물묶기 이미 활성화됨")
+
+            # 매물 리스트 컨테이너 내부 스크롤로 모든 매물 로딩
+            print("   📜 매물 리스트 스크롤 중...")
+
+            previous_api_count = len(self.articles_data.get('articleList', [])) if self.articles_data else 0
+            scroll_end_count = 0
+
+            for i in range(100):
+                # 컨테이너 스크롤 - .item_list가 실제 스크롤 가능한 컨테이너
+                scrolled = await page.evaluate("""
+                    () => {
+                        const container = document.querySelector('.item_list');
+                        if (container) {
+                            const before = container.scrollTop;
+                            // 스크롤 다운
+                            container.scrollTop += 500;
+                            const after = container.scrollTop;
+
+                            // 현재 DOM에 있는 매물 개수도 확인
+                            const items = document.querySelectorAll('.item_link, .item_inner, [class*="item"]');
+
+                            return {
+                                found: true,
+                                moved: after > before,
+                                scrollTop: after,
+                                scrollHeight: container.scrollHeight,
+                                clientHeight: container.clientHeight,
+                                domItemCount: items.length
+                            };
+                        }
+                        return {found: false};
+                    }
+                """)
+
+                # 진행상황 출력 (10회마다)
+                if i % 10 == 0 and i > 0:
+                    print(f"   🔄 스크롤 진행 중... (#{i+1})")
+
+                await asyncio.sleep(1.5)  # API 응답 대기
+
+                # 현재 수집된 매물 수
+                current_api_count = len(self.articles_data.get('articleList', [])) if self.articles_data else 0
+
+                if current_api_count > previous_api_count:
+                    print(f"   📊 API 응답: {current_api_count}건 수집됨 (+{current_api_count - previous_api_count})")
+                    previous_api_count = current_api_count
+                    scroll_end_count = 0  # 새 데이터가 들어오면 카운터 리셋
+
+                # 스크롤이 끝에 도달했는지 체크
+                if scrolled.get('found') and not scrolled.get('moved'):
+                    scroll_end_count += 1
+                    # 스크롤 끝에서 5회 연속 데이터 없으면 종료
+                    if scroll_end_count >= 5:
+                        print(f"   ⏹️  스크롤 끝 도달 - 수집 완료")
+                        break
+                else:
+                    scroll_end_count = 0  # 스크롤이 움직이면 리셋
+
+            print(f"   ✅ 최종 수집: {previous_api_count}건")
 
             await browser.close()
 
@@ -171,9 +344,21 @@ class NaverRealEstateCrawler:
                 updated_count = 0
                 skipped_count = 0
 
+                # 배치 내 중복 제거
+                seen_article_nos = set()
+
                 for article in article_list:
+                    article_no = article['articleNo']
+
+                    # 배치 내 중복 체크
+                    if article_no in seen_article_nos:
+                        skipped_count += 1
+                        continue
+                    seen_article_nos.add(article_no)
+
+                    # DB 중복 확인
                     existing = db.query(Article).filter(
-                        Article.article_no == article['articleNo']
+                        Article.article_no == article_no
                     ).first()
 
                     if existing:
@@ -188,7 +373,7 @@ class NaverRealEstateCrawler:
                         continue
 
                     article_obj = Article(
-                        article_no=article['articleNo'],
+                        article_no=article_no,
                         complex_id=complex_id,
                         trade_type=article.get('tradeTypeName'),
                         price=article.get('dealOrWarrantPrc'),
@@ -201,7 +386,11 @@ class NaverRealEstateCrawler:
                         feature_desc=article.get('articleFeatureDesc'),
                         tags=json.dumps(article.get('tagList', []), ensure_ascii=False),
                         realtor_name=article.get('realtorName'),
-                        confirm_date=article.get('articleConfirmYmd')
+                        confirm_date=article.get('articleConfirmYmd'),
+                        # 동일 매물 정보 추가
+                        same_addr_cnt=article.get('sameAddrCnt', 1),
+                        same_addr_max_prc=article.get('sameAddrMaxPrc'),
+                        same_addr_min_prc=article.get('sameAddrMinPrc')
                     )
                     db.add(article_obj)
                     saved_count += 1
@@ -290,9 +479,7 @@ async def main():
     """메인 함수"""
     # 크롤링할 단지 ID 목록
     complex_ids = [
-        "109208",  # 시범반도유보라아이비파크4.0
-        # 여기에 추가 단지 ID 추가 가능
-        # "105416",  # 동탄역KCC스위첸
+        "1482",    # 향촌현대5차 (테스트)
     ]
 
     crawler = NaverRealEstateCrawler()

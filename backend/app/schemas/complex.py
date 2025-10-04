@@ -51,6 +51,9 @@ class ArticleBase(BaseModel):
     tags: Optional[str] = None
     realtor_name: Optional[str] = None
     confirm_date: Optional[str] = None
+    same_addr_cnt: Optional[int] = 1
+    same_addr_max_prc: Optional[str] = None
+    same_addr_min_prc: Optional[str] = None
 
 
 class ArticleResponse(ArticleBase):
@@ -104,3 +107,21 @@ class ArticleSearchParams(BaseModel):
     is_active: Optional[bool] = True
     limit: int = 50
     offset: int = 0
+
+
+class ComplexCreate(BaseModel):
+    """단지 생성 요청"""
+    complex_id: str
+    complex_name: str
+    complex_type: Optional[str] = None
+    total_households: Optional[int] = None
+    total_dongs: Optional[int] = None
+    completion_date: Optional[str] = None
+    min_area: Optional[float] = None
+    max_area: Optional[float] = None
+    min_price: Optional[int] = None
+    max_price: Optional[int] = None
+    min_lease_price: Optional[int] = None
+    max_lease_price: Optional[int] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None

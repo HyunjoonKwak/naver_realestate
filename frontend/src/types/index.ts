@@ -35,6 +35,9 @@ export interface Article {
   tags?: string;
   realtor_name?: string;
   confirm_date?: string;
+  same_addr_cnt?: number;
+  same_addr_max_prc?: string;
+  same_addr_min_prc?: string;
   is_active?: boolean;
   first_found_at?: string;
   last_seen_at?: string;
