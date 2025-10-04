@@ -123,3 +123,6 @@ backend/*.png
 # - check_data.py (데이터 확인 도구)
 # - reset_db.py (DB 초기화 도구)
 # - test_api.sh (API 테스트 스크립트)
+
+# Archive folder (개발 중 생성된 테스트 파일 보관소)
+archive/
