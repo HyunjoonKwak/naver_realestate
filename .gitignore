@@ -88,3 +88,38 @@ redis_data/
 *.temp
 tmp/
 temp/
+
+# Crawler test data (captured API responses)
+api_*.json
+captured_*.json
+all_api.json
+all_captured_data.json
+api_requests.json
+
+# Test/Debug Python files (실험용 스크립트 - 개발 중 테스트용)
+crawl_with_cookies.py
+crawl_with_network.py
+crawl_with_route.py
+debug_dynamic_content.py
+debug_page_structure.py
+find_real_complex.py
+intercept_api_responses.py
+manual_network_check.py
+quick_test.py
+test_crawler.py
+test_api_direct.py
+crawl_real_complex.py
+simple_crawl.py
+save_to_db.py
+init_db.py
+
+# Screenshot files (크롤링 테스트 중 생성된 스크린샷)
+*.png
+!docs/screenshots/*.png
+backend/*.png
+
+# Keep production files:
+# - advanced_crawler.py (프로덕션 크롤러)
+# - check_data.py (데이터 확인 도구)
+# - reset_db.py (DB 초기화 도구)
+# - test_api.sh (API 테스트 스크립트)

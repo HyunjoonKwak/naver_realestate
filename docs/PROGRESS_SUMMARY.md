@@ -1,122 +1,115 @@
 # 프로젝트 진행 상황 요약
 
-**프로젝트**: 네이버 부동산 매물 관리 시스템
-**최종 업데이트**: 2025-10-04
-**진행 상태**: Phase 2 진행 중 (핵심 기능 개발)
+**프로젝트**: 네이버 부동산 매물 관리 시스템  
+**최종 업데이트**: 2025-10-04  
+**진행 상태**: Phase 4 완료 ✅ (풀스택 애플리케이션 완성)
 
 ---
 
 ## ✅ 완료된 작업
 
-### 1. 개발 환경 구축
+### Phase 1: 개발 환경 구축 ✅
 - ✅ Docker Desktop 설치 및 설정
 - ✅ PostgreSQL 15 컨테이너 실행 (포트 5432)
 - ✅ Redis 7 컨테이너 실행 (포트 6379)
 - ✅ Python 가상환경 생성 및 패키지 설치
+- ✅ Playwright 설치 및 Chromium 브라우저 설정
 
-### 2. 프로젝트 구조
-```
-naver_realestate/
-├── backend/
-│   ├── app/
-│   │   ├── core/          # 데이터베이스 설정
-│   │   ├── models/        # SQLAlchemy 모델
-│   │   └── crawler/       # 크롤러 모듈
-│   ├── venv/              # Python 가상환경
-│   └── requirements.txt   # 패키지 목록
-├── docs/
-│   ├── PROJECT_OVERVIEW.md
-│   ├── IMPLEMENTATION_CHECKLIST.md
-│   ├── SETUP_GUIDE.md
-│   └── PROGRESS_SUMMARY.md
-├── docker-compose.yml     # Docker 설정
-├── .gitignore
-└── README.md
-```
+### Phase 2: 크롤링 및 데이터 수집 ✅
+- ✅ Playwright 기반 크롤러 개발
+- ✅ 네트워크 응답 가로채기 방식 구현
+- ✅ 단지 정보 크롤링
+- ✅ 매물 정보 크롤링 (매매/전세/월세)
+- ✅ 실거래가 크롤링
+- ✅ 통합 크롤러 (advanced_crawler.py) 완성
+- ✅ 가격 변동 자동 추적 기능
+- ✅ 중복 체크 및 증분 업데이트
 
-### 3. 네이버 부동산 크롤링 성공 🎉
+### Phase 3: REST API 개발 ✅
+- ✅ FastAPI 프로젝트 설정
+- ✅ Pydantic 스키마 정의 (schemas/complex.py)
+- ✅ API 라우터 개발
+  - ✅ complexes.py - 단지 관련 API (6개 엔드포인트)
+  - ✅ articles.py - 매물 관련 API (5개 엔드포인트)
+  - ✅ transactions.py - 실거래가 관련 API (5개 엔드포인트)
+- ✅ FastAPI 메인 앱 설정 (main.py)
+- ✅ CORS 미들웨어 설정
+- ✅ OpenAPI 문서 자동 생성
+- ✅ API 테스트 스크립트 (test_api.sh)
 
-#### 크롤링 방법
-- **Playwright** 사용
-- **네트워크 응답 가로채기** 방식
-- `page.on("response")` 이벤트로 API 응답 캡처
-
-#### 크롤링된 데이터
-**단지 정보** (단지 ID: 109208 - 시범반도유보라아이비파크4.0)
-- 단지명, 주소
-- 세대수: 740세대
-- 동수: 6개동
-- 준공일: 2018년 1월 29일
-- 면적: 114.58㎡ ~ 130.55㎡
-- 가격대: 10억 4,000만원 ~ 14억원
-
-**매물 정보**
-- 총 20건의 매물
-- 거래 유형, 가격, 면적, 층, 방향 등
-
-**실거래가 정보**
-- API 응답 캡처 성공
-
-### 4. 데이터베이스 구축
-
-#### 생성된 테이블
-1. **complexes** - 아파트 단지
-2. **articles** - 매물
-3. **article_history** - 매물 변동 이력
-4. **transactions** - 실거래가
-
-#### 저장된 데이터
-- 단지: 1개
-- 매물: 20건
-- 실거래가: 1건
-
-### 5. 고급 크롤러 개발 ✨ NEW
-
-#### advanced_crawler.py
-- ✅ 여러 단지 크롤링 지원
-- ✅ 단지 정보, 매물, 실거래가 통합 수집
-- ✅ 가격 변동 자동 추적
-- ✅ 중복 체크 및 업데이트 로직
-- ✅ 실시간 데이터베이스 저장
-
-#### 주요 기능
-```python
-# 여러 단지 ID 목록으로 자동 크롤링
-complex_ids = ["109208", "105416", ...]
-
-# 수집 데이터:
-# - 단지 상세 정보 (면적, 세대수, 준공일 등)
-# - 현재 매물 목록 (가격, 층, 방향 등)
-# - 실거래가 (거래일, 거래가, 면적 등)
-```
-
-#### 데이터 모델 업그레이드
-- `price_change_state` 필드 추가 → 가격 변동 추적
-- `Transaction` 모델 필드 확장 → 거래일, 포맷된 가격 등
-- 자동 타임스탬프 (created_at, updated_at)
+### Phase 4: 프론트엔드 개발 ✅
+- ✅ Next.js 14 프로젝트 설정
+- ✅ TypeScript 설정
+- ✅ Tailwind CSS 설정
+- ✅ 프로젝트 구조 생성
+- ✅ TypeScript 타입 정의 (types/index.ts)
+- ✅ API 클라이언트 개발 (lib/api.ts)
+- ✅ 페이지 개발
+  - ✅ layout.tsx - 루트 레이아웃 및 네비게이션
+  - ✅ page.tsx - 대시보드 (홈)
+  - ✅ complexes/page.tsx - 단지 목록
+  - ✅ complexes/[id]/page.tsx - 단지 상세 (차트 포함)
+  - ✅ articles/page.tsx - 매물 검색
+  - ✅ transactions/page.tsx - 실거래가 조회
+- ✅ Recharts 통합 (가격 추이 차트)
+- ✅ 반응형 디자인
+- ✅ 프론트엔드 포트 3000으로 설정
 
 ---
 
-## 📂 주요 파일
+## 📂 프로젝트 구조
 
-### 크롤링 관련
-- `advanced_crawler.py` - ⭐ 고급 크롤러 (단지, 매물, 실거래 통합)
-- `simple_crawl.py` - 기본 크롤러 (학습용)
-- `backend/app/crawler/naver_land_crawler.py` - 크롤러 클래스
-- `captured_*.json` - API 응답 샘플 데이터
-
-### 데이터베이스 관련
-- `backend/app/models/complex.py` - SQLAlchemy 모델 (업데이트)
-- `backend/app/core/database.py` - 데이터베이스 설정
-- `init_db.py` - 테이블 생성 스크립트
-- `reset_db.py` - 테이블 초기화 스크립트
-- `check_data.py` - 데이터 확인 스크립트
-- `save_to_db.py` - 레거시 데이터 저장 (참고용)
-
-### 문서
-- `docs/PROJECT_OVERVIEW.md` - 프로젝트 전체 개요
-- `docs/IMPLEMENTATION_CHECKLIST.md` - 구현 체크리스트
-- `docs/SETUP_GUIDE.md` - Docker 사용법 가이드
+```
+naver_realestate/
+├── advanced_crawler.py          # 통합 크롤러
+├── reset_db.py                  # DB 초기화
+├── check_data.py                # 데이터 확인
+├── test_api.sh                  # API 테스트
+├── backend/
+│   ├── app/
+│   │   ├── api/                 # FastAPI 라우터
+│   │   │   ├── complexes.py
+│   │   │   ├── articles.py
+│   │   │   └── transactions.py
+│   │   ├── schemas/             # Pydantic 스키마
+│   │   │   └── complex.py
+│   │   ├── core/                # DB 설정
+│   │   │   └── database.py
+│   │   ├── models/              # SQLAlchemy 모델
+│   │   │   └── complex.py
+│   │   ├── crawler/             # 크롤러 모듈
+│   │   │   └── naver_land_crawler.py
+│   │   └── main.py              # FastAPI 앱
+│   └── venv/                    # Python 가상환경
+├── frontend/                     # Next.js 프론트엔드
+│   ├── src/
+│   │   ├── app/                 # Next.js 페이지
+│   │   │   ├── layout.tsx
+│   │   │   ├── page.tsx         # 대시보드
+│   │   │   ├── complexes/
+│   │   │   │   ├── page.tsx     # 단지 목록
+│   │   │   │   └── [id]/page.tsx # 단지 상세
+│   │   │   ├── articles/
+│   │   │   │   └── page.tsx     # 매물 검색
+│   │   │   └── transactions/
+│   │   │       └── page.tsx     # 실거래가 조회
+│   │   ├── lib/
+│   │   │   └── api.ts           # Axios API 클라이언트
+│   │   └── types/
+│   │       └── index.ts         # TypeScript 타입
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── tailwind.config.ts
+│   └── next.config.js
+├── docs/
+│   ├── PROJECT_OVERVIEW.md
+│   ├── PROGRESS_SUMMARY.md      # 이 문서
+│   ├── API_GUIDE.md
+│   ├── SETUP_GUIDE.md
+│   └── IMPLEMENTATION_CHECKLIST.md
+├── docker-compose.yml
+└── README.md
+```
 
 ---
 
@@ -125,63 +118,69 @@ complex_ids = ["109208", "105416", ...]
 ### Backend
 - **Python 3.13**
 - **Playwright** - 웹 크롤링
+- **FastAPI** - REST API 프레임워크
 - **SQLAlchemy 2.0** - ORM
+- **Pydantic** - 데이터 검증
 - **PostgreSQL 15** - 데이터베이스
 - **Redis 7** - 캐시/메시지 브로커
 
-### 인프라
+### Frontend
+- **Next.js 14** (App Router)
+- **React 18**
+- **TypeScript**
+- **Tailwind CSS** - 스타일링
+- **Recharts** - 데이터 시각화
+- **Axios** - HTTP 클라이언트
+
+### Infrastructure
 - **Docker & Docker Compose** - 컨테이너화
 
 ---
 
 ## 🚀 실행 방법
 
-### 기본 설정
-
-#### 1. Docker 컨테이너 시작
+### 1. Docker 컨테이너 시작
 ```bash
 docker-compose up -d
 ```
 
-#### 2. 데이터베이스 초기화 (최초 1회)
+### 2. 데이터베이스 초기화
 ```bash
 backend/venv/bin/python reset_db.py
 ```
 
-### 고급 크롤러 실행 (권장)
-
-#### 3. 통합 크롤링 및 저장
+### 3. 크롤링 실행
 ```bash
 backend/venv/bin/python advanced_crawler.py
 ```
-- 단지 정보, 매물, 실거래가를 한 번에 수집하고 저장
-- `advanced_crawler.py`에서 `complex_ids` 목록을 수정하여 원하는 단지 추가
 
-#### 4. 데이터 확인
+### 4. API 서버 시작
 ```bash
-backend/venv/bin/python check_data.py
+cd backend
+venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### 레거시 방식 (학습용)
-
+### 5. 프론트엔드 시작 (새 터미널)
 ```bash
-# 1. 크롤링만 (JSON 파일 생성)
-backend/venv/bin/python simple_crawl.py
-
-# 2. 저장 (JSON → DB)
-backend/venv/bin/python save_to_db.py
+cd frontend
+npm install  # 최초 1회만
+npm run dev
 ```
+
+### 6. 접속
+- **프론트엔드**: http://localhost:3000
+- **API 문서**: http://localhost:8000/docs
 
 ---
 
 ## 💡 핵심 발견사항
 
-### 네이버 부동산 크롤링의 어려움
+### 네이버 부동산 크롤링 성공 방법
 1. ❌ DOM selector 방식 → JavaScript 동적 렌더링으로 실패
 2. ❌ API 직접 호출 → Authorization Token 획득 어려움
 3. ✅ **네트워크 응답 가로채기 → 성공!**
 
-### 성공한 방법
+### 구현 방법
 ```python
 # Playwright의 response 이벤트 리스너 사용
 page.on("response", lambda response: handle_response(response))
@@ -194,36 +193,90 @@ async def handle_response(response):
 
 ---
 
-## 📊 Phase 2 진행 상황
+## 📊 현재 데이터 현황
 
-### ✅ 완료된 기능
-1. ✅ 여러 단지 크롤링 (복수 단지 ID 지원)
-2. ✅ 실거래가 데이터 수집 및 저장
-3. ✅ 일자별 매물 변동 추적 (가격 변동 감지)
-4. ✅ 통합 크롤러 개발 (단지/매물/실거래 올인원)
+### 데이터베이스
+- 단지: 1개 (시범반도유보라아이비파크4.0)
+- 매물: 20건
+- 실거래: 1건
+- 변동 이력: 추적 가능
 
-### 🚧 다음 단계 (Phase 3)
-1. ⬜ FastAPI REST 엔드포인트 개발
-   - 단지 목록 조회
-   - 매물 검색 및 필터링
-   - 가격 변동 이력 조회
-   - 실거래가 통계
+### API 엔드포인트
+- **단지 API**: 6개
+  - GET /complexes/ - 목록
+  - GET /complexes/{id} - 상세
+  - GET /complexes/{id}/articles - 매물
+  - GET /complexes/{id}/transactions - 실거래
+  - GET /complexes/{id}/stats - 통계
+  
+- **매물 API**: 5개
+  - GET /articles/ - 검색
+  - GET /articles/{id} - 상세
+  - GET /articles/recent/all - 최근 매물
+  - GET /articles/price-changed/all - 가격변동
 
-2. ⬜ 자동화 스케줄링 (Celery + Redis)
-   - 일일 크롤링 스케줄
-   - 가격 변동 알림
-   - 신규 매물 알림
+- **실거래 API**: 5개
+  - GET /transactions/ - 검색
+  - GET /transactions/recent - 최근
+  - GET /transactions/stats/price-trend - 가격 추이
+  - GET /transactions/stats/area-price - 면적별 가격
+  - GET /transactions/stats/floor-premium - 층별 프리미엄
 
-3. ⬜ 데이터 분석 기능
-   - 가격 추이 분석
-   - 최적 매매 시기 추천
-   - 시세 비교
+### 프론트엔드 페이지
+- **5개 페이지 완성**
+  1. 대시보드 (/)
+  2. 단지 목록 (/complexes)
+  3. 단지 상세 (/complexes/[id])
+  4. 매물 검색 (/articles)
+  5. 실거래가 조회 (/transactions)
 
-### 📋 추가 개발 계획
-- Frontend (Next.js)
-- 데이터 시각화 (Chart.js)
-- 알림 기능 (이메일/Slack)
-- 배포 (Docker + AWS/GCP)
+---
+
+## 📈 Phase별 완료 상태
+
+| Phase | 내용 | 상태 | 완료일 |
+|-------|------|------|--------|
+| Phase 1 | 개발 환경 구축 | ✅ 완료 | 2025-10-03 |
+| Phase 2 | 크롤링 및 데이터 수집 | ✅ 완료 | 2025-10-03 |
+| Phase 3 | REST API 개발 | ✅ 완료 | 2025-10-04 |
+| Phase 4 | 프론트엔드 개발 | ✅ 완료 | 2025-10-04 |
+| Phase 5 | Celery 자동화 | 🚧 대기 | - |
+| Phase 6 | 알림 기능 | 🚧 대기 | - |
+| Phase 7 | 고급 분석 | 🚧 대기 | - |
+
+---
+
+## 🎯 Phase 4 완료! 🎉
+
+### ✅ 핵심 성과
+
+**1. 풀스택 애플리케이션 완성**
+- 백엔드 API 15+ 엔드포인트
+- 프론트엔드 5개 완성된 페이지
+- 실시간 데이터 연동
+
+**2. 데이터 시각화**
+- Recharts 통합
+- 가격 추이 라인 차트
+- 반응형 차트 디자인
+
+**3. 사용자 경험**
+- 직관적인 네비게이션
+- 실시간 필터링 및 검색
+- 깔끔한 UI/UX (Tailwind CSS)
+
+**4. 확장 가능한 아키텍처**
+- TypeScript 타입 안정성
+- 컴포넌트 기반 설계
+- API 클라이언트 분리
+
+### 🚀 다음 목표: Phase 5
+
+**Celery 자동화 스케줄링**
+- 정기 크롤링 스케줄 (일일 2회)
+- 가격 변동 자동 감지
+- 신규 매물 알림
+- 이메일/Slack 알림
 
 ---
 
@@ -244,41 +297,58 @@ async def handle_response(response):
 
 ## 📈 프로젝트 통계
 
-- **총 개발 시간**: 약 5-6시간
-- **작성된 파일**: 35+ 파일
-- **코드 라인 수**: ~3000+ 라인
-- **완료율**: Phase 2 약 60% 완료
+- **총 개발 기간**: 2일
+- **작성된 파일**: 50+ 파일
+- **코드 라인 수**: ~5000+ 라인
+- **완료율**: Phase 4 완료 (약 60%)
 
-### 데이터베이스 현황
-- 단지: 1개
-- 매물: 20건
-- 실거래: 1건
-- 변동 이력: 추적 준비 완료
+### 기술 스택 통계
+- Backend 파일: 15+
+- Frontend 파일: 20+
+- 문서 파일: 5+
+- 설정 파일: 10+
 
 ---
 
-## 🎯 Phase 2 완료!
+## 🎓 학습 포인트
 
-### ✅ 핵심 성과
+### Backend 개발
+- FastAPI 프로젝트 구조 설계
+- Pydantic 스키마 활용
+- SQLAlchemy ORM 최적화
+- CORS 설정 및 미들웨어
 
-**1. 통합 크롤러 완성**
-- 단지, 매물, 실거래가를 한 번에 수집
-- 자동 중복 체크 및 업데이트
-- 가격 변동 자동 감지
+### Frontend 개발
+- Next.js 14 App Router
+- TypeScript 타입 안전성
+- Tailwind CSS 반응형 디자인
+- Recharts 데이터 시각화
+- Axios API 통신
 
-**2. 데이터 모델 고도화**
-- 실거래가 모델 완성 (거래일, 면적, 층 등)
-- 가격 변동 추적 필드 추가
-- 타임스탬프 자동 관리
+### 크롤링
+- Playwright 네트워크 가로채기
+- 비동기 크롤링
+- 데이터 정규화
+- 에러 핸들링
 
-**3. 확장 가능한 구조**
-- 여러 단지 동시 크롤링 지원
-- 데이터베이스 자동 업데이트
-- 재실행 시 증분 업데이트
+---
 
-### 🚀 다음 목표: Phase 3
+## 📝 다음 단계 로드맵
 
-**API 개발 및 자동화**로 실제 서비스 단계로 진입합니다:
-- FastAPI 엔드포인트
-- Celery 스케줄링
-- 가격 분석 및 알림
+### 단기 (1-2주)
+- [ ] Celery + Redis 스케줄링 설정
+- [ ] 일일 자동 크롤링 (오전 9시, 오후 6시)
+- [ ] 가격 변동 감지 및 알림
+- [ ] 이메일 알림 기능
+
+### 중기 (1개월)
+- [ ] 사용자 인증 (JWT)
+- [ ] 관심 단지 개인화
+- [ ] 고급 필터링 기능
+- [ ] 가격 분석 알고리즘
+
+### 장기 (2-3개월)
+- [ ] 머신러닝 가격 예측
+- [ ] 모바일 앱 (React Native)
+- [ ] 프로덕션 배포 (AWS/GCP)
+- [ ] 성능 최적화

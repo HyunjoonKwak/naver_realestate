@@ -17,7 +17,9 @@
       "Bash(yes)",
       "Bash(sudo chown:*)",
       "Bash(npm init:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(awk:*)",
+      "Bash(xargs:*)"
     ],
     "deny": [],
     "ask": []
