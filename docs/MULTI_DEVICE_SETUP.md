@@ -33,7 +33,7 @@ Synology NAS (운영)
 cd ~/code_work  # 또는 원하는 경로
 
 # 2. 저장소 클론
-git clone https://github.com/your-username/naver_realestate.git
+git clone https://github.com/HyunjoonKwak/naver_realestate.git
 cd naver_realestate
 
 # 3. 브랜치 확인
