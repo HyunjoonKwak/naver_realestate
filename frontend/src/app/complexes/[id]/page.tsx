@@ -76,7 +76,20 @@ export default function ComplexDetailPage() {
       {/* 단지 헤더 */}
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex justify-between items-start mb-4">
-          <h1 className="text-3xl font-bold text-gray-900">{complex.complex_name}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-gray-900">{complex.complex_name}</h1>
+            <a
+              href={`https://new.land.naver.com/complexes/${complexId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 transition-colors"
+            >
+              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              네이버 부동산
+            </a>
+          </div>
           <button
             onClick={handleDelete}
             disabled={deleting}
