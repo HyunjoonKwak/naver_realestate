@@ -173,7 +173,31 @@ export default function ComplexesPage() {
     const fetchComplexes = async () => {
       try {
         const response = await complexAPI.getAll();
-        setComplexes(response.data);
+        const fetchedComplexes = response.data;
+
+        // localStorage에서 저장된 순서 불러오기
+        const savedOrder = localStorage.getItem('complexOrder');
+        if (savedOrder) {
+          try {
+            const orderIds = JSON.parse(savedOrder) as number[];
+            // 저장된 순서대로 정렬
+            const orderedComplexes = orderIds
+              .map(id => fetchedComplexes.find(c => c.id === id))
+              .filter(Boolean) as Complex[];
+
+            // 새로 추가된 단지는 맨 뒤에 추가
+            const newComplexes = fetchedComplexes.filter(
+              c => !orderIds.includes(c.id)
+            );
+
+            setComplexes([...orderedComplexes, ...newComplexes]);
+          } catch (e) {
+            console.error('순서 복원 실패:', e);
+            setComplexes(fetchedComplexes);
+          }
+        } else {
+          setComplexes(fetchedComplexes);
+        }
       } catch (error) {
         console.error('데이터 로딩 실패:', error);
       } finally {
@@ -205,7 +229,13 @@ export default function ComplexesPage() {
         const oldIndex = items.findIndex((item) => item.id === active.id);
         const newIndex = items.findIndex((item) => item.id === over.id);
 
-        return arrayMove(items, oldIndex, newIndex);
+        const newOrder = arrayMove(items, oldIndex, newIndex);
+
+        // localStorage에 새로운 순서 저장
+        const orderIds = newOrder.map(item => item.id);
+        localStorage.setItem('complexOrder', JSON.stringify(orderIds));
+
+        return newOrder;
       });
     }
   };

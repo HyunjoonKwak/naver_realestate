@@ -152,6 +152,12 @@ def get_complex_stats(
         Article.trade_type == "전세"
     ).count()
 
+    monthly_count = db.query(Article).filter(
+        Article.complex_id == complex_id,
+        Article.is_active == True,
+        Article.trade_type == "월세"
+    ).count()
+
     # 실거래 통계
     total_transactions = db.query(Transaction).filter(
         Transaction.complex_id == complex_id
@@ -169,6 +175,7 @@ def get_complex_stats(
             "total": total_articles,
             "sale": sale_count,
             "lease": lease_count,
+            "monthly": monthly_count,
         },
         "transactions": {
             "total": total_transactions,
@@ -224,6 +231,13 @@ def delete_complex(
 
     # 관련된 실거래가 삭제
     db.query(Transaction).filter(Transaction.complex_id == complex_id).delete()
+
+    # 관련된 스냅샷 삭제
+    from app.models.complex import ArticleSnapshot, ArticleChange
+    db.query(ArticleSnapshot).filter(ArticleSnapshot.complex_id == complex_id).delete()
+
+    # 관련된 변동사항 삭제
+    db.query(ArticleChange).filter(ArticleChange.complex_id == complex_id).delete()
 
     # 단지 삭제
     db.delete(complex_obj)

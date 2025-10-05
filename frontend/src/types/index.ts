@@ -70,6 +70,7 @@ export interface ComplexStats {
     total: number;
     sale: number;
     lease: number;
+    monthly: number;
   };
   transactions: {
     total: number;
@@ -88,4 +89,39 @@ export interface PriceTrend {
     max_price: number;
     count: number;
   }[];
+}
+
+export interface ArticleChange {
+  id: number;
+  change_type: 'NEW' | 'REMOVED' | 'PRICE_UP' | 'PRICE_DOWN';
+  article_no?: string;
+  trade_type?: string;
+  area_name?: string;
+  building_name?: string;
+  floor_info?: string;
+  old_price?: string;
+  new_price?: string;
+  price_change_amount?: number;
+  price_change_percent?: number;
+  detected_at: string;
+}
+
+export interface ArticleChangeSummary {
+  complex_id: string;
+  hours: number;
+  summary: {
+    new: number;
+    removed: number;
+    price_up: number;
+    price_down: number;
+    total: number;
+    most_significant_change?: ArticleChange;
+  };
+}
+
+export interface ArticleChangeList {
+  complex_id: string;
+  hours: number;
+  total: number;
+  changes: ArticleChange[];
 }

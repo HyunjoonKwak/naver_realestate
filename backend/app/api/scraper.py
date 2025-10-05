@@ -3,6 +3,7 @@
 """
 import re
 import asyncio
+from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Query, BackgroundTasks, Depends
 from pydantic import BaseModel
@@ -10,6 +11,7 @@ from playwright.async_api import async_playwright
 from sqlalchemy.orm import Session
 from ..core.database import get_db
 from ..models.complex import Complex, Article, Transaction
+from ..services.article_tracker import ArticleTracker
 
 router = APIRouter(prefix="/scraper", tags=["scraper"])
 
@@ -171,11 +173,12 @@ async def crawl_complex(request: CrawlRequest, background_tasks: BackgroundTasks
     }
 
 
-async def run_crawler(complex_id: str):
+async def run_crawler(complex_id: str, create_snapshot: bool = False):
     """실제 크롤링 실행 (advanced_crawler.py 로직 이용)"""
     import sys
     import os
     import traceback
+    from ..core.database import SessionLocal
 
     print(f"   [SCRAPER] Starting run_crawler for complex {complex_id}")
 
@@ -199,8 +202,102 @@ async def run_crawler(complex_id: str):
         print(f"   [SCRAPER] Saving to database...")
         crawler.save_to_database(complex_id)
 
+        # 스냅샷 생성 및 변동사항 감지
+        if create_snapshot:
+            print(f"   [SCRAPER] Creating snapshot and detecting changes...")
+            db = SessionLocal()
+            try:
+                tracker = ArticleTracker(db)
+
+                # 현재 매물 조회
+                articles = db.query(Article).filter(
+                    Article.complex_id == complex_id,
+                    Article.is_active == True
+                ).all()
+
+                # 스냅샷 생성
+                tracker.create_snapshot(complex_id, articles)
+
+                # 변동사항 감지
+                tracker.detect_changes(complex_id)
+
+            finally:
+                db.close()
+
         print(f"✅ 크롤링 완료: {complex_id}")
     except Exception as e:
         print(f"❌ 크롤링 실패: {complex_id} - {e}")
         print(f"   [SCRAPER] Full traceback:")
         traceback.print_exc()
+
+
+# 크롤링 상태 저장용 딕셔너리
+crawling_status = {}
+
+@router.post("/refresh/{complex_id}")
+async def refresh_and_track(
+    complex_id: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    """
+    매물 목록 새로고침 및 변동사항 추적
+
+    - 크롤링 실행
+    - 스냅샷 생성
+    - 변동사항 자동 감지
+
+    Args:
+        complex_id: 단지 ID
+    """
+    # 단지가 존재하는지 확인
+    complex = db.query(Complex).filter(Complex.complex_id == complex_id).first()
+    if not complex:
+        raise HTTPException(status_code=404, detail="단지를 찾을 수 없습니다")
+
+    # 크롤링 상태 초기화
+    crawling_status[complex_id] = {
+        "status": "running",
+        "started_at": datetime.now().isoformat()
+    }
+
+    # 백그라운드에서 크롤링 + 스냅샷 생성 + 변동 감지 실행
+    async def crawl_with_status_update():
+        try:
+            await run_crawler(complex_id, True)
+            crawling_status[complex_id] = {
+                "status": "completed",
+                "completed_at": datetime.now().isoformat()
+            }
+        except Exception as e:
+            crawling_status[complex_id] = {
+                "status": "failed",
+                "error": str(e),
+                "failed_at": datetime.now().isoformat()
+            }
+
+    background_tasks.add_task(crawl_with_status_update)
+
+    return {
+        "message": "매물 새로고침이 시작되었습니다. 완료 후 변동사항이 자동으로 감지됩니다.",
+        "complex_id": complex_id,
+        "complex_name": complex.complex_name
+    }
+
+
+@router.get("/refresh/{complex_id}/status")
+def get_refresh_status(complex_id: str):
+    """
+    크롤링 상태 조회
+
+    Args:
+        complex_id: 단지 ID
+
+    Returns:
+        상태 정보 (running, completed, failed)
+    """
+    status = crawling_status.get(complex_id, {"status": "not_found"})
+    return {
+        "complex_id": complex_id,
+        **status
+    }

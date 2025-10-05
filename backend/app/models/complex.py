@@ -132,3 +132,69 @@ class ArticleHistory(Base):
 
     def __repr__(self):
         return f"<ArticleHistory(article={self.article_no}, type={self.change_type})>"
+
+
+class ArticleSnapshot(Base):
+    """매물 스냅샷 - 특정 시점의 매물 상태 저장"""
+    __tablename__ = "article_snapshots"
+
+    id = Column(BigInteger, primary_key=True, index=True)
+    complex_id = Column(String(50), index=True, nullable=False, comment="단지 ID")
+    article_no = Column(String(50), index=True, nullable=False, comment="매물 번호")
+
+    # 매물 정보 (스냅샷 시점)
+    trade_type = Column(String(20), comment="거래 유형")
+    price = Column(String(100), comment="가격")
+    area_name = Column(String(50), comment="면적 타입명")
+    area1 = Column(Float, comment="공급면적(㎡)")
+    floor_info = Column(String(50), comment="층 정보")
+    direction = Column(String(50), comment="방향")
+    building_name = Column(String(100), comment="동 정보")
+    realtor_name = Column(String(200), comment="공인중개사")
+    same_addr_cnt = Column(Integer, comment="동일 매물 수")
+
+    # 스냅샷 메타데이터
+    snapshot_date = Column(DateTime(timezone=True), index=True, nullable=False, comment="스냅샷 일시")
+    crawl_session_id = Column(String(100), comment="크롤링 세션 ID")
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    def __repr__(self):
+        return f"<ArticleSnapshot(article={self.article_no}, date={self.snapshot_date})>"
+
+
+class ArticleChange(Base):
+    """매물 변동 감지 결과"""
+    __tablename__ = "article_changes"
+
+    id = Column(BigInteger, primary_key=True, index=True)
+    complex_id = Column(String(50), index=True, nullable=False, comment="단지 ID")
+    article_no = Column(String(50), index=True, comment="매물 번호 (신규/삭제는 null 가능)")
+
+    # 변동 유형: NEW, REMOVED, PRICE_UP, PRICE_DOWN
+    change_type = Column(String(20), index=True, nullable=False, comment="변동 유형")
+
+    # 변동 상세 정보
+    old_price = Column(String(100), comment="이전 가격")
+    new_price = Column(String(100), comment="변경 가격")
+    price_change_amount = Column(BigInteger, comment="가격 변동액 (만원)")
+    price_change_percent = Column(Float, comment="가격 변동률 (%)")
+
+    # 매물 기본 정보 (빠른 조회용)
+    trade_type = Column(String(20), comment="거래 유형")
+    area_name = Column(String(50), comment="면적")
+    building_name = Column(String(100), comment="동")
+    floor_info = Column(String(50), comment="층")
+
+    # 스냅샷 참조
+    from_snapshot_id = Column(BigInteger, comment="이전 스냅샷 ID")
+    to_snapshot_id = Column(BigInteger, comment="현재 스냅샷 ID")
+
+    # 감지 시각
+    detected_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    # 읽음 여부 (주간 브리핑에서 사용)
+    is_read = Column(Boolean, default=False, comment="확인 여부")
+
+    def __repr__(self):
+        return f"<ArticleChange(type={self.change_type}, article={self.article_no})>"

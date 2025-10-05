@@ -1,14 +1,15 @@
 """
 매물 관련 API 엔드포인트
 """
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from typing import List, Optional, Dict
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
 
 from app.core.database import get_db
-from app.models.complex import Article
+from app.models.complex import Article, ArticleChange
 from app.schemas.complex import ArticleResponse
+from app.services.article_tracker import ArticleTracker
 
 router = APIRouter(prefix="/articles", tags=["articles"])
 
@@ -122,3 +123,70 @@ def get_price_changed_articles(
     ).order_by(Article.updated_at.desc()).limit(limit).all()
 
     return articles
+
+
+@router.get("/changes/{complex_id}/summary")
+def get_change_summary(
+    complex_id: str,
+    hours: int = Query(24, ge=1, le=168, description="조회할 시간 범위 (시간)"),
+    db: Session = Depends(get_db)
+) -> Dict:
+    """
+    매물 변동사항 요약 정보
+
+    지정된 시간 범위 내의 매물 변동사항을 요약하여 반환합니다.
+
+    - **complex_id**: 단지 ID
+    - **hours**: 조회할 시간 범위 (기본: 24시간, 최대: 1주일)
+    """
+    tracker = ArticleTracker(db)
+    summary = tracker.get_change_summary(complex_id, hours=hours)
+
+    return {
+        "complex_id": complex_id,
+        "hours": hours,
+        "summary": summary
+    }
+
+
+@router.get("/changes/{complex_id}/list")
+def get_change_list(
+    complex_id: str,
+    hours: int = Query(24, ge=1, le=168, description="조회할 시간 범위 (시간)"),
+    limit: Optional[int] = Query(None, ge=1, le=100, description="최대 개수"),
+    db: Session = Depends(get_db)
+):
+    """
+    매물 변동사항 상세 목록
+
+    지정된 시간 범위 내의 모든 변동사항을 반환합니다.
+
+    - **complex_id**: 단지 ID
+    - **hours**: 조회할 시간 범위
+    - **limit**: 최대 개수 (선택)
+    """
+    tracker = ArticleTracker(db)
+    changes = tracker.get_recent_changes(complex_id, hours=hours, limit=limit)
+
+    return {
+        "complex_id": complex_id,
+        "hours": hours,
+        "total": len(changes),
+        "changes": [
+            {
+                "id": change.id,
+                "change_type": change.change_type,
+                "article_no": change.article_no,
+                "trade_type": change.trade_type,
+                "area_name": change.area_name,
+                "building_name": change.building_name,
+                "floor_info": change.floor_info,
+                "old_price": change.old_price,
+                "new_price": change.new_price,
+                "price_change_amount": change.price_change_amount,
+                "price_change_percent": change.price_change_percent,
+                "detected_at": change.detected_at.isoformat() if change.detected_at else None
+            }
+            for change in changes
+        ]
+    }
