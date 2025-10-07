@@ -414,19 +414,66 @@ echo "Backup completed: $BACKUP_DIR/db_backup_$DATE.sql"
 
 ## 🔧 트러블슈팅
 
-### 문제 1: 메모리 부족
+### 문제 1: "No container found for api_1" 에러
+
+**증상:** `docker-compose exec api python migrate_db.py` 실행 시 에러
+
+**원인:** 컨테이너가 시작되지 않았거나 이름이 다름
+
+**해결 순서:**
+
+```bash
+# 1. 현재 실행 중인 컨테이너 확인
+sudo docker-compose ps
+
+# 2. 컨테이너가 없으면 시작
+sudo docker-compose up -d
+
+# 3. 빌드가 필요한 경우
+sudo docker-compose up -d --build
+
+# 4. 로그 확인 (빌드 진행 상황)
+sudo docker-compose logs -f
+
+# 5. 컨테이너 이름 확인 후 실행
+sudo docker ps
+# 예: naver_realestate_api로 표시되면
+sudo docker exec naver_realestate_api python migrate_db.py
+
+# 또는 docker-compose로 실행
+sudo docker-compose exec api python migrate_db.py
+```
+
+**빌드 시간:**
+- 최초 실행: 5-10분 소요 (Playwright 브라우저 다운로드)
+- "Application startup complete" 메시지가 나올 때까지 대기
+
+### 문제 2: 빌드 중 "no space left on device" 에러
+
+**증상:** Docker 이미지 빌드 중 디스크 공간 부족
+
+**해결:**
+```bash
+# 사용하지 않는 Docker 이미지/컨테이너 삭제
+sudo docker system prune -a
+
+# 디스크 공간 확인
+df -h
+```
+
+### 문제 3: 메모리 부족
 
 **증상:** 컨테이너가 자주 재시작됨
 
 **해결:**
-1. Container Manager → 컨테이너 → 세부 정보
+1. Docker → 컨테이너 → 세부 정보
 2. 리소스 제한 설정:
    - PostgreSQL: 512MB
    - Redis: 256MB
-   - API: 512MB
+   - API: 1GB
    - Frontend: 512MB
 
-### 문제 2: 포트 충돌
+### 문제 4: 포트 충돌
 
 **증상:** `Port already in use` 에러
 
@@ -436,19 +483,62 @@ echo "Backup completed: $BACKUP_DIR/db_backup_$DATE.sql"
 sudo netstat -tuln | grep :3000
 sudo netstat -tuln | grep :8000
 
+# 또는
+sudo lsof -i :8000
+
 # 프로세스 종료
 sudo kill -9 <PID>
 ```
 
-### 문제 3: 권한 문제
+### 문제 5: 권한 문제
 
 **증상:** `Permission denied` 에러
 
 **해결:**
 ```bash
 # 폴더 권한 변경
-sudo chown -R 1000:1000 /volume1/docker/naver_realestate
+sudo chown -R root:root /volume1/docker/naver_realestate
 sudo chmod -R 755 /volume1/docker/naver_realestate
+
+# .env 파일 권한
+sudo chmod 644 /volume1/docker/naver_realestate/.env
+```
+
+### 문제 6: Playwright 브라우저 다운로드 실패
+
+**증상:** "Browser executable doesn't exist" 에러
+
+**해결:**
+```bash
+# 컨테이너 내부에서 수동 설치
+sudo docker-compose exec api bash
+playwright install chromium
+playwright install-deps chromium
+exit
+
+# 컨테이너 재시작
+sudo docker-compose restart api
+```
+
+### 문제 7: systemd 패키지 설치 오류
+
+**증상:** Docker 빌드 중 "Failed to take /etc/passwd lock" 또는 systemd 관련 오류
+
+**원인:** Docker 컨테이너 내부에서 systemd 설치 시 충돌
+
+**해결:** Dockerfile이 이미 수정되어 있으므로, 최신 버전으로 업데이트
+```bash
+# 프로젝트 업데이트
+cd /volume1/docker/naver_realestate
+sudo git pull
+
+# 또는 Dockerfile을 직접 수정
+sudo nano backend/Dockerfile
+# DEBIAN_FRONTEND=noninteractive와 --no-install-recommends 옵션 추가 확인
+
+# 빌드 캐시 삭제 후 재빌드
+sudo docker-compose build --no-cache api
+sudo docker-compose up -d
 ```
 
 ---

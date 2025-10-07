@@ -2,8 +2,12 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
+# systemd 설치 방지 설정
+RUN echo 'exit 101' > /usr/sbin/policy-rc.d && \
+    chmod +x /usr/sbin/policy-rc.d
+
 # 시스템 패키지 설치 (Playwright 브라우저용)
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     wget \
     gnupg \
     ca-certificates \
@@ -25,7 +29,6 @@ RUN apt-get update && apt-get install -y \
     libxfixes3 \
     libxkbcommon0 \
     libxrandr2 \
-    xdg-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Python 패키지 설치
