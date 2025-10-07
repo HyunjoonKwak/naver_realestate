@@ -17,7 +17,9 @@ class Complex(Base):
     complex_id = Column(String(50), unique=True, index=True, nullable=False, comment="네이버 단지 ID")
     complex_name = Column(String(200), nullable=False, comment="단지명")
     complex_type = Column(String(50), comment="단지 유형")
-    address = Column(String(500), comment="주소")
+    address = Column(String(500), comment="주소 (deprecated - 하위호환용)")
+    road_address = Column(String(500), comment="도로명 주소")
+    jibun_address = Column(String(500), comment="지번(법정동) 주소")
 
     # 단지 기본 정보
     total_households = Column(Integer, comment="총 세대수")

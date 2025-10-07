@@ -78,6 +78,9 @@ open http://localhost:8000/docs
 **Services:** [backend/app/services/](backend/app/services/)
 - `crawler_service.py` - NaverRealEstateCrawler class (moved from root)
 - `article_tracker.py` - Article change detection and snapshot management
+- `molit_service.py` - 국토교통부 실거래가 API 연동 (XML 파싱, 페이지네이션)
+- `transaction_service.py` - 실거래가 데이터 저장 및 통계 처리
+- `location_parser.py` - 법정동 코드 파싱 및 시군구 코드 추출 (20,000개 법정동)
 
 ### Crawler Architecture
 
@@ -150,10 +153,71 @@ open http://localhost:8000/docs
 
 **Complex ID Extraction:** From Naver URL `https://new.land.naver.com/complexes/{complex_id}`, extract numeric ID.
 
+**Real Transaction Integration (NEW):** Refresh endpoint automatically fetches MOLIT data after crawling. See `docs/TRANSACTION_GUIDE.md` for setup.
+
+## Real Transaction (실거래가) Feature
+
+### Setup
+1. **Get API Key**: https://www.data.go.kr/data/15058017/openapi.do
+2. **Add to .env**: `MOLIT_API_KEY=your_key_here`
+3. **Restart server**: `.venv/bin/uvicorn app.main:app --reload`
+
+### Architecture
+- **Data Source**: 국토교통부 공공데이터 (XML format)
+- **Coverage**: 전국 20,278개 법정동 코드 자동 매칭
+- **Auto-fetch**: 단지 새로고침 시 자동으로 최근 6개월 실거래가 조회
+- **Deduplication**: 같은 날짜/면적/층/가격 거래는 중복 제거
+
+### Services
+1. **MOLITService** ([molit_service.py](backend/app/services/molit_service.py))
+   - XML 응답 파싱 (`_parse_xml_response()`)
+   - 페이지네이션 처리 (`_fetch_all_pages()`) - 1000건 이상 자동 수집
+   - 매매/전월세 API 지원
+   - LocationParser 통합으로 전국 주소 자동 매칭
+
+2. **TransactionService** ([transaction_service.py](backend/app/services/transaction_service.py))
+   - `fetch_and_save_transactions()` - API 조회 및 DB 저장
+   - `get_area_stats()` - 평형별 통계 계산 (평균/최고/최저/거래건수)
+   - 가격 포맷팅 (억/만원)
+
+3. **LocationParser** ([location_parser.py](backend/app/services/location_parser.py))
+   - 법정동 코드 파일 로드 (`dong_code_active.txt`, 20,278개)
+   - 주소 → 시군구 코드(5자리) 자동 추출
+   - 정확한 매칭 + 부분 매칭 + fallback 전략
+
+### API Endpoints
+- `POST /api/transactions/fetch/{complex_id}` - 실거래가 수동 조회
+- `GET /api/transactions/stats/area-summary/{complex_id}` - 평형별 통계
+- `POST /api/scraper/refresh/{complex_id}` - 크롤링 + 실거래가 자동 조회
+
+### Frontend Integration
+- **위치**: 단지 상세 페이지 ([complexes/[id]/page.tsx](frontend/src/app/complexes/[id]/page.tsx))
+- **UI**: 변동사항 요약 아래 "💰 실거래가 요약" 섹션
+- **표시 정보**: 평형별 카드 (평균/최고/최저가, 거래건수)
+- **자동 업데이트**: 새로고침 버튼 클릭 시 자동 조회
+
+### Testing
+```bash
+# 테스트 스크립트 실행
+./test_transaction_api.sh
+
+# LocationParser 테스트
+cd backend && .venv/bin/python
+>>> from app.services.location_parser import LocationParser
+>>> parser = LocationParser()
+>>> parser.extract_sigungu_code("경기도 성남시 분당구")
+'41135'
+```
+
+### Data Files
+- **법정동 코드**: `backend/app/data/dong_code_active.txt` (20,278 records)
+- **Format**: `법정동코드\t법정동명` (TSV)
+
 ## Known Limitations
 
 - No user authentication system yet (planned)
 - No scheduled crawling (Celery integration planned)
-- Real transaction (실거래가) feature was removed, needs re-implementation via MOLIT API
+- ~~Real transaction (실거래가) feature was removed~~ → **✅ Re-implemented (Phase 2)**
 - Weekly briefing feature designed but not fully implemented
 - Crawling requires headless=False to avoid bot detection
+- MOLIT API has rate limits (1,000 calls/day for general key)

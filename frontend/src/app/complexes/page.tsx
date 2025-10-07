@@ -63,7 +63,16 @@ function ComplexCard({ complex }: { complex: Complex }) {
 
       {/* 카드 내용 */}
       <a href={`/complexes/${complex.complex_id}`} className="block p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">{complex.complex_name}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">{complex.complex_name}</h3>
+        {complex.address && (
+          <div className="text-sm text-gray-500 mb-3 flex items-start gap-1">
+            <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="line-clamp-2">{complex.address}</span>
+          </div>
+        )}
         <div className="space-y-2 text-sm text-gray-600">
           <div className="flex justify-between">
             <span>유형</span>
@@ -134,7 +143,16 @@ function ComplexListItem({ complex }: { complex: Complex }) {
         <a href={`/complexes/${complex.complex_id}`} className="flex-1 px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{complex.complex_name}</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">{complex.complex_name}</h3>
+              {complex.address && (
+                <div className="text-sm text-gray-500 mb-2 flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  {complex.address}
+                </div>
+              )}
               <div className="flex gap-6 text-sm text-gray-600">
                 <span>{complex.complex_type}</span>
                 <span>{complex.total_households}세대</span>
@@ -143,7 +161,7 @@ function ComplexListItem({ complex }: { complex: Complex }) {
               </div>
             </div>
             {complex.min_price && complex.max_price && (
-              <div className="text-right">
+              <div className="text-right ml-4">
                 <div className="text-sm text-gray-600 mb-1">매매가</div>
                 <div className="text-lg font-semibold text-blue-600">
                   {(complex.min_price / 10000).toFixed(1)}억 ~ {(complex.max_price / 10000).toFixed(1)}억

@@ -11,6 +11,9 @@ class ComplexBase(BaseModel):
     complex_id: str
     complex_name: str
     complex_type: Optional[str] = None
+    address: Optional[str] = None  # 하위호환용 (도로명 주소 우선)
+    road_address: Optional[str] = None  # 도로명 주소
+    jibun_address: Optional[str] = None  # 지번(법정동) 주소
     total_households: Optional[int] = None
     total_dongs: Optional[int] = None
     completion_date: Optional[str] = None

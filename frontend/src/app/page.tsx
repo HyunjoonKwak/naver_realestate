@@ -94,13 +94,22 @@ export default function Home() {
                 className="block px-6 py-4 hover:bg-gray-50 transition"
               >
                 <div className="flex justify-between items-start">
-                  <div>
+                  <div className="flex-1">
                     <h3 className="text-lg font-medium text-gray-900">{complex.complex_name}</h3>
+                    {complex.address && (
+                      <div className="text-sm text-gray-500 mt-1 flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        {complex.address}
+                      </div>
+                    )}
                     <p className="text-sm text-gray-600 mt-1">
                       {complex.complex_type || '-'} · {complex.total_households || '-'}세대 · {complex.total_dongs || '-'}개동
                     </p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right ml-4">
                     <div className="text-sm font-medium text-blue-600">
                       {complex.min_price && complex.max_price
                         ? `${(complex.min_price / 10000).toFixed(1)}억 ~ ${(complex.max_price / 10000).toFixed(1)}억`

@@ -47,6 +47,9 @@ export default function ComplexDetailPage() {
           setLastRefreshTime(new Date(savedTime));
         }
 
+        // 크롤링 진행 중인지 확인하고 폴링 시작
+        checkAndPollRefreshStatus();
+
         // 변동사항 조회 (24시간 이내)
         try {
           const [summaryRes, listRes] = await Promise.all([
@@ -92,12 +95,14 @@ export default function ComplexDetailPage() {
             clearInterval(pollInterval);
 
             // 크롤링 완료 후 데이터 다시 로드
-            const [complexRes, summaryRes, listRes] = await Promise.all([
+            const [complexRes, statsRes, summaryRes, listRes] = await Promise.all([
               complexAPI.getDetail(complexId),
+              complexAPI.getStats(complexId),
               articleAPI.getChangeSummary(complexId, 24),
               articleAPI.getChangeList(complexId, 24, 10)
             ]);
             setComplex(complexRes.data);
+            setStats(statsRes.data);
             setChangeSummary(summaryRes.data);
             setChangeList(listRes.data);
             setRefreshing(false);
@@ -124,6 +129,67 @@ export default function ComplexDetailPage() {
       console.error('새로고침 실패:', error);
       alert(error.response?.data?.detail || '새로고침에 실패했습니다.');
       setRefreshing(false);
+    }
+  };
+
+  const checkAndPollRefreshStatus = async () => {
+    try {
+      const statusRes = await scraperAPI.getRefreshStatus(complexId);
+      const status = statusRes.data.status;
+
+      if (status === 'running') {
+        console.log('[AUTO-REFRESH] 크롤링이 진행 중입니다. 폴링을 시작합니다.');
+        setRefreshing(true);
+        pollRefreshStatus();
+      }
+    } catch (err) {
+      console.log('[AUTO-REFRESH] 크롤링 상태 조회 실패 또는 크롤링 기록 없음');
+    }
+  };
+
+  const pollRefreshStatus = () => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const statusRes = await scraperAPI.getRefreshStatus(complexId);
+        const status = statusRes.data.status;
+
+        if (status === 'completed') {
+          console.log('[AUTO-REFRESH] 크롤링 완료. 데이터를 다시 로드합니다.');
+          clearInterval(pollInterval);
+          await reloadAllData();
+          setRefreshing(false);
+        } else if (status === 'failed') {
+          console.log('[AUTO-REFRESH] 크롤링 실패');
+          clearInterval(pollInterval);
+          setRefreshing(false);
+        }
+      } catch (err) {
+        console.error('[AUTO-REFRESH] 상태 조회 실패:', err);
+      }
+    }, 2000);
+
+    // 최대 5분 타임아웃
+    setTimeout(() => {
+      clearInterval(pollInterval);
+      setRefreshing(false);
+    }, 300000);
+  };
+
+  const reloadAllData = async () => {
+    try {
+      const [complexRes, statsRes, summaryRes, listRes] = await Promise.all([
+        complexAPI.getDetail(complexId),
+        complexAPI.getStats(complexId),
+        articleAPI.getChangeSummary(complexId, 24),
+        articleAPI.getChangeList(complexId, 24, 10),
+      ]);
+      setComplex(complexRes.data);
+      setStats(statsRes.data);
+      setChangeSummary(summaryRes.data);
+      setChangeList(listRes.data);
+      console.log('[AUTO-REFRESH] 데이터 리로드 완료');
+    } catch (err) {
+      console.error('[AUTO-REFRESH] 데이터 리로드 실패:', err);
     }
   };
 
@@ -186,7 +252,36 @@ export default function ComplexDetailPage() {
             {deleting ? '삭제 중...' : '단지 삭제'}
           </button>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+        <div className="mt-3 space-y-2">
+          {/* 도로명 주소 */}
+          {complex.road_address && (
+            <div className="flex items-center gap-2">
+              <div className="text-gray-600 text-sm flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span className="font-medium text-blue-600">[도로명]</span>
+                {complex.road_address}
+              </div>
+            </div>
+          )}
+
+          {/* 지번(법정동) 주소 */}
+          {complex.jibun_address && (
+            <div className="flex items-center gap-2">
+              <div className="text-gray-600 text-sm flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span className="font-medium text-green-600">[법정동]</span>
+                {complex.jibun_address}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mt-4">
           <div>
             <div className="text-gray-600">유형</div>
             <div className="font-medium">{complex.complex_type}</div>

@@ -12,6 +12,7 @@ export default function NewComplexPage() {
   const [fetchingInfo, setFetchingInfo] = useState(false);
   const [error, setError] = useState('');
   const [naverUrl, setNaverUrl] = useState('');
+  const [collectAddress, setCollectAddress] = useState(false);
 
   const [formData, setFormData] = useState({
     complex_id: '',
@@ -118,11 +119,15 @@ export default function NewComplexPage() {
       const response = await axios.post(`${API_URL}/api/complexes/`, payload);
 
       // 단지 추가 성공 후 백그라운드 크롤링 시작
-      setError('✅ 단지가 추가되었습니다. 백그라운드에서 매물 정보를 수집합니다...');
+      const message = collectAddress
+        ? '✅ 단지가 추가되었습니다. 백그라운드에서 매물 정보와 주소를 수집합니다...'
+        : '✅ 단지가 추가되었습니다. 백그라운드에서 매물 정보를 수집합니다...';
+      setError(message);
 
       // 백그라운드 크롤링 시작 (응답을 기다리지 않음)
       axios.post(`${API_URL}/api/scraper/crawl`, {
-        complex_id: response.data.complex_id
+        complex_id: response.data.complex_id,
+        collect_address: collectAddress
       }).catch(err => {
         console.error('크롤링 실패:', err);
       });
@@ -388,6 +393,24 @@ export default function NewComplexPage() {
                 />
               </div>
             </div>
+          </div>
+
+          {/* 주소 수집 옵션 */}
+          <div className="border-b pb-4">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={collectAddress}
+                onChange={(e) => setCollectAddress(e.target.checked)}
+                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+              />
+              <div>
+                <div className="font-medium text-gray-900">주소도 함께 수집</div>
+                <div className="text-sm text-gray-600">
+                  매물 검색과 함께 단지 주소를 자동으로 수집합니다 (약 10-15초 소요, 브라우저가 열리고 수동으로 계속 버튼을 눌러야 합니다)
+                </div>
+              </div>
+            </label>
           </div>
 
           {/* 버튼 */}

@@ -3,6 +3,9 @@ export interface Complex {
   complex_id: string;
   complex_name: string;
   complex_type?: string;
+  address?: string;  // 하위호환용 (도로명 주소 우선)
+  road_address?: string;  // 도로명 주소
+  jibun_address?: string;  // 지번(법정동) 주소
   total_households?: number;
   total_dongs?: number;
   completion_date?: string;
@@ -124,4 +127,21 @@ export interface ArticleChangeList {
   hours: number;
   total: number;
   changes: ArticleChange[];
+}
+
+export interface TransactionAreaStats {
+  exclusive_area: number;
+  area_name: string;
+  avg_price: number;
+  min_price: number;
+  max_price: number;
+  count: number;
+  formatted_avg_price: string;
+}
+
+export interface TransactionSummary {
+  complex_id: string;
+  complex_name: string;
+  period_months: number;
+  area_stats: TransactionAreaStats[];
 }

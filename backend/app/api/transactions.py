@@ -9,6 +9,7 @@ from sqlalchemy import func, and_
 from app.core.database import get_db
 from app.models.complex import Transaction, Complex
 from app.schemas.complex import TransactionResponse
+from app.services.transaction_service import TransactionService
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
@@ -247,4 +248,55 @@ def get_floor_premium_stats(
                 "avg_price": int(high_floor) if high_floor else 0
             }
         }
+    }
+
+
+@router.post("/fetch/{complex_id}")
+def fetch_transactions_from_molit(
+    complex_id: str,
+    months: int = Query(6, ge=1, le=24, description="조회 기간 (개월)"),
+    db: Session = Depends(get_db)
+):
+    """
+    국토부 API에서 실거래가를 조회하여 DB에 저장
+
+    - **complex_id**: 단지 ID
+    - **months**: 조회 기간 (1~24개월)
+    """
+    service = TransactionService(db)
+    result = service.fetch_and_save_transactions(complex_id, months)
+
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+
+    return result
+
+
+@router.get("/stats/area-summary/{complex_id}")
+def get_area_summary_stats(
+    complex_id: str,
+    months: int = Query(6, ge=1, le=24, description="조회 기간 (개월)"),
+    db: Session = Depends(get_db)
+):
+    """
+    평형별 실거래가 요약 통계
+
+    최근 N개월간 평형별 평균/최고/최저가와 거래건수를 조회합니다.
+
+    - **complex_id**: 단지 ID
+    - **months**: 조회 기간 (1~24개월)
+    """
+    # 단지 확인
+    complex_obj = db.query(Complex).filter(Complex.complex_id == complex_id).first()
+    if not complex_obj:
+        raise HTTPException(status_code=404, detail="단지를 찾을 수 없습니다")
+
+    service = TransactionService(db)
+    area_stats = service.get_area_stats(complex_id, months)
+
+    return {
+        "complex_id": complex_id,
+        "complex_name": complex_obj.complex_name,
+        "period_months": months,
+        "area_stats": area_stats
     }

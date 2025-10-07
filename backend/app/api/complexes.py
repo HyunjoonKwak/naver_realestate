@@ -210,6 +210,84 @@ def create_complex(
     return new_complex
 
 
+@router.post("/{complex_id}/collect-address")
+async def collect_complex_address(
+    complex_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    단지 주소 수집 (크롤링)
+
+    - **complex_id**: 네이버 단지 ID
+    """
+    from ..services.crawler_service import NaverRealEstateCrawler
+    from fastapi import BackgroundTasks
+
+    # 단지 조회
+    complex_obj = db.query(Complex).filter(Complex.complex_id == complex_id).first()
+
+    if not complex_obj:
+        raise HTTPException(status_code=404, detail="단지를 찾을 수 없습니다")
+
+    # 크롤러로 주소 수집 (collect_address=True)
+    crawler = NaverRealEstateCrawler()
+    result = await crawler.crawl_complex(complex_id, collect_address=True)
+
+    # 수집된 주소 저장
+    if result and result.get('complex') and result['complex'].get('address'):
+        new_address = result['complex']['address']
+        complex_obj.address = new_address
+        db.commit()
+        db.refresh(complex_obj)
+
+        return {
+            "success": True,
+            "message": "주소가 수집되었습니다",
+            "complex_id": complex_id,
+            "address": new_address
+        }
+    else:
+        return {
+            "success": False,
+            "message": "주소를 수집하지 못했습니다",
+            "complex_id": complex_id
+        }
+
+
+@router.patch("/{complex_id}/address")
+def update_complex_address(
+    complex_id: str,
+    address_data: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    단지 주소 업데이트 (수동 입력)
+
+    - **complex_id**: 네이버 단지 ID
+    - **address**: 새로운 주소
+    """
+    # 단지 조회
+    complex_obj = db.query(Complex).filter(Complex.complex_id == complex_id).first()
+
+    if not complex_obj:
+        raise HTTPException(status_code=404, detail="단지를 찾을 수 없습니다")
+
+    # 주소 업데이트
+    new_address = address_data.get('address')
+    if not new_address:
+        raise HTTPException(status_code=400, detail="주소를 입력해주세요")
+
+    complex_obj.address = new_address
+    db.commit()
+    db.refresh(complex_obj)
+
+    return {
+        "message": "주소가 업데이트되었습니다",
+        "complex_id": complex_id,
+        "address": new_address
+    }
+
+
 @router.delete("/{complex_id}")
 def delete_complex(
     complex_id: str,

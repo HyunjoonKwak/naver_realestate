@@ -29,7 +29,12 @@
       "Bash(pkill:*)",
       "Read(//private/tmp/**)",
       "Bash(source:*)",
-      "Bash(backend/.venv/bin/python3 migrate_db.py:*)"
+      "Bash(backend/.venv/bin/python3 migrate_db.py:*)",
+      "Read(//Users/specialrisk_mac/code_work/molit_price_tracker/**)",
+      "Bash(.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload)",
+      "Bash(npx eslint:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

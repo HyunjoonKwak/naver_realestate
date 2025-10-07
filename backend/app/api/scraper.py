@@ -18,6 +18,7 @@ router = APIRouter(prefix="/scraper", tags=["scraper"])
 
 class CrawlRequest(BaseModel):
     complex_id: str
+    collect_address: bool = False
 
 
 @router.get("/complex")
@@ -157,19 +158,27 @@ async def crawl_complex(request: CrawlRequest, background_tasks: BackgroundTasks
     단지의 매물 정보 크롤링 (백그라운드 작업)
 
     - **complex_id**: 크롤링할 단지 ID
+    - **collect_address**: 주소 수집 여부 (기본값: False)
     """
     # 단지가 존재하는지 확인
     complex = db.query(Complex).filter(Complex.complex_id == request.complex_id).first()
     if not complex:
         raise HTTPException(status_code=404, detail="단지를 찾을 수 없습니다")
 
+    # 크롤링 상태 초기화
+    crawling_status[request.complex_id] = {
+        "status": "running",
+        "started_at": datetime.now().isoformat()
+    }
+
     # 백그라운드에서 크롤링 실행 (변동 추적 활성화)
-    background_tasks.add_task(run_crawler, request.complex_id, True)
+    background_tasks.add_task(run_crawler_with_status, request.complex_id, True, request.collect_address)
 
     return {
         "message": "크롤링이 시작되었습니다",
         "complex_id": request.complex_id,
-        "complex_name": complex.complex_name
+        "complex_name": complex.complex_name,
+        "collect_address": request.collect_address
     }
 
 
@@ -195,13 +204,14 @@ async def crawl_complex_by_id(complex_id: str, background_tasks: BackgroundTasks
     }
 
 
-async def run_crawler(complex_id: str, create_snapshot: bool = True):
+async def run_crawler(complex_id: str, create_snapshot: bool = True, collect_address: bool = False):
     """
     실제 크롤링 실행 (crawler_service 사용)
 
     Args:
         complex_id: 단지 ID
         create_snapshot: 스냅샷 생성 및 변동 감지 여부 (기본값 True)
+        collect_address: 주소 수집 여부 (기본값 False)
     """
     import traceback
     from ..core.database import SessionLocal
@@ -209,13 +219,14 @@ async def run_crawler(complex_id: str, create_snapshot: bool = True):
 
     print(f"   [SCRAPER] Starting run_crawler for complex {complex_id}")
     print(f"   [SCRAPER] Snapshot tracking: {'Enabled' if create_snapshot else 'Disabled'}")
+    print(f"   [SCRAPER] Address collection: {'Enabled' if collect_address else 'Disabled'}")
 
     try:
         print(f"   [SCRAPER] Creating crawler instance...")
         crawler = NaverRealEstateCrawler()
 
         print(f"   [SCRAPER] Starting crawl_complex...")
-        await crawler.crawl_complex(complex_id)
+        await crawler.crawl_complex(complex_id, collect_address=collect_address)
 
         print(f"   [SCRAPER] Saving to database...")
         crawler.save_to_database(complex_id)
@@ -252,6 +263,48 @@ async def run_crawler(complex_id: str, create_snapshot: bool = True):
 # 크롤링 상태 저장용 딕셔너리
 crawling_status = {}
 
+
+async def run_crawler_with_status(complex_id: str, create_snapshot: bool = True, collect_address: bool = False):
+    """
+    상태 업데이트를 포함한 크롤링 실행
+
+    Args:
+        complex_id: 단지 ID
+        create_snapshot: 스냅샷 생성 및 변동 감지 여부 (기본값 True)
+        collect_address: 주소 수집 여부 (기본값 False)
+    """
+    try:
+        await run_crawler(complex_id, create_snapshot, collect_address)
+        crawling_status[complex_id] = {
+            "status": "completed",
+            "completed_at": datetime.now().isoformat()
+        }
+    except Exception as e:
+        crawling_status[complex_id] = {
+            "status": "failed",
+            "error": str(e),
+            "failed_at": datetime.now().isoformat()
+        }
+
+
+@router.get("/crawl/{complex_id}/status")
+def get_crawl_status(complex_id: str):
+    """
+    크롤링 상태 조회
+
+    Args:
+        complex_id: 단지 ID
+
+    Returns:
+        상태 정보 (running, completed, failed)
+    """
+    status = crawling_status.get(complex_id, {"status": "not_found"})
+    return {
+        "complex_id": complex_id,
+        **status
+    }
+
+
 @router.post("/refresh/{complex_id}")
 async def refresh_and_track(
     complex_id: str,
@@ -279,10 +332,25 @@ async def refresh_and_track(
         "started_at": datetime.now().isoformat()
     }
 
-    # 백그라운드에서 크롤링 + 스냅샷 생성 + 변동 감지 실행
+    # 백그라운드에서 크롤링 + 스냅샷 생성 + 변동 감지 + 실거래가 조회 실행
     async def crawl_with_status_update():
         try:
             await run_crawler(complex_id, True)
+
+            # 실거래가 조회 및 저장
+            from ..core.database import SessionLocal
+            from ..services.transaction_service import TransactionService
+
+            db_local = SessionLocal()
+            try:
+                transaction_service = TransactionService(db_local)
+                result = transaction_service.fetch_and_save_transactions(complex_id, months=6)
+                print(f"✅ 실거래가 저장: {result.get('saved_count', 0)}건")
+            except Exception as tx_error:
+                print(f"⚠️ 실거래가 조회 실패 (무시): {tx_error}")
+            finally:
+                db_local.close()
+
             crawling_status[complex_id] = {
                 "status": "completed",
                 "completed_at": datetime.now().isoformat()
@@ -319,3 +387,33 @@ def get_refresh_status(complex_id: str):
         "complex_id": complex_id,
         **status
     }
+
+
+@router.get("/search-address")
+async def search_address(complex_name: str = Query(..., description="단지명")):
+    """
+    네이버 검색으로 단지 주소 크롤링
+
+    - **complex_name**: 검색할 단지명
+    """
+    try:
+        from ..services.address_service import AddressService
+
+        address_service = AddressService()
+        address = await address_service._get_complex_address_async(complex_name)
+
+        if address:
+            return {
+                "success": True,
+                "complex_name": complex_name,
+                "address": address
+            }
+        else:
+            return {
+                "success": False,
+                "complex_name": complex_name,
+                "address": None,
+                "message": "주소를 찾을 수 없습니다"
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"주소 검색 오류: {str(e)}")
