@@ -542,6 +542,25 @@ sudo docker-compose logs -f api
 
 **참고:** backend/Dockerfile이 `mcr.microsoft.com/playwright/python:v1.49.0-noble` 이미지를 사용하도록 변경되었습니다. 이 이미지는 Playwright와 Chromium이 사전 설치되어 있어 빌드 시간도 단축됩니다.
 
+### 문제 8: Frontend 빌드 오류 "Module not found: Can't resolve '@/lib/api'"
+
+**증상:** Next.js 빌드 중 모듈을 찾을 수 없음
+
+**원인:** `npm ci --only=production`으로 devDependencies가 설치되지 않아 빌드 실패
+
+**해결:** 최신 Dockerfile 사용 (이미 수정됨)
+```bash
+# 프로젝트 업데이트
+cd /volume1/code_work/naver_realestate
+sudo git pull
+
+# Frontend만 재빌드
+sudo docker-compose build --no-cache frontend
+sudo docker-compose up -d
+```
+
+**참고:** frontend/Dockerfile이 `npm ci` (모든 의존성) → 빌드 → `npm prune --production` (프로덕션만 유지) 순서로 변경되었습니다.
+
 ---
 
 ## 📈 성능 최적화
