@@ -34,7 +34,8 @@
       "Bash(.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload)",
       "Bash(npx eslint:*)",
       "Bash(npx tsc:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []

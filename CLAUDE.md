@@ -34,6 +34,14 @@ cd frontend && npm install
 cd backend
 .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
+# Start Celery Worker (백그라운드 작업 처리)
+cd backend
+./run_celery_worker.sh
+
+# Start Celery Beat (스케줄러 - 자동 크롤링)
+cd backend
+./run_celery_beat.sh
+
 # Start frontend dev server (from project root)
 cd frontend
 npm run dev

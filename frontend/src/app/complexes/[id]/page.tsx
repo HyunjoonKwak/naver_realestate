@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { complexAPI, articleAPI, scraperAPI } from '@/lib/api';
+import { complexAPI, articleAPI, scraperAPI, transactionAPI } from '@/lib/api';
 import type { ComplexDetail, ComplexStats, ArticleChangeSummary, ArticleChangeList } from '@/types';
 
 export default function ComplexDetailPage() {
@@ -31,6 +31,14 @@ export default function ComplexDetailPage() {
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
+  // 탭 상태
+  const [activeTab, setActiveTab] = useState<'articles' | 'transactions'>('articles');
+
+  // 실거래가 상태
+  const [fetchingTransactions, setFetchingTransactions] = useState(false);
+  const [transactionAreaStats, setTransactionAreaStats] = useState<any>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -47,9 +55,6 @@ export default function ComplexDetailPage() {
           setLastRefreshTime(new Date(savedTime));
         }
 
-        // 크롤링 진행 중인지 확인하고 폴링 시작
-        checkAndPollRefreshStatus();
-
         // 변동사항 조회 (24시간 이내)
         try {
           const [summaryRes, listRes] = await Promise.all([
@@ -60,6 +65,18 @@ export default function ComplexDetailPage() {
           setChangeList(listRes.data);
         } catch (err) {
           console.log('변동사항 조회 실패 (아직 스냅샷이 없을 수 있음)');
+        }
+
+        // 실거래가 데이터 로드
+        try {
+          const [areaSummaryRes, transactionsRes] = await Promise.all([
+            transactionAPI.getAreaSummary(complexId, 6),
+            transactionAPI.search({ complex_id: complexId, limit: 50 })
+          ]);
+          setTransactionAreaStats(areaSummaryRes.data);
+          setTransactions(transactionsRes.data);
+        } catch (err) {
+          console.log('실거래가 데이터 조회 실패 (아직 데이터가 없을 수 있음)');
         }
       } catch (error) {
         console.error('데이터 로딩 실패:', error);
@@ -193,6 +210,39 @@ export default function ComplexDetailPage() {
     }
   };
 
+  const handleFetchTransactions = async () => {
+    if (!confirm('국토부 API에서 최근 6개월 실거래가를 수집하시겠습니까?')) {
+      return;
+    }
+
+    setFetchingTransactions(true);
+    try {
+      const result = await transactionAPI.fetchFromMOLIT(complexId, 6);
+      alert(`실거래가 수집 완료!\n수집된 거래: ${result.data.saved_count}건`);
+
+      // 실거래가 데이터 다시 로드
+      await loadTransactionData();
+    } catch (error: any) {
+      console.error('실거래가 수집 실패:', error);
+      alert(error.response?.data?.detail || '실거래가 수집에 실패했습니다.');
+    } finally {
+      setFetchingTransactions(false);
+    }
+  };
+
+  const loadTransactionData = async () => {
+    try {
+      const [areaSummaryRes, transactionsRes] = await Promise.all([
+        transactionAPI.getAreaSummary(complexId, 6),
+        transactionAPI.search({ complex_id: complexId, limit: 50 })
+      ]);
+      setTransactionAreaStats(areaSummaryRes.data);
+      setTransactions(transactionsRes.data);
+    } catch (err) {
+      console.log('실거래가 데이터 조회 실패 (아직 데이터가 없을 수 있음)');
+    }
+  };
+
   const handleDelete = async () => {
     if (!confirm(`${complex?.complex_name} 단지를 삭제하시겠습니까?\n\n단지와 관련된 모든 매물 및 실거래가 데이터가 함께 삭제됩니다.`)) {
       return;
@@ -244,13 +294,35 @@ export default function ComplexDetailPage() {
               네이버 부동산
             </a>
           </div>
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
-          >
-            {deleting ? '삭제 중...' : '단지 삭제'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {refreshing ? '수집 중...' : '매물 새로고침'}
+            </button>
+            <button
+              onClick={handleFetchTransactions}
+              disabled={fetchingTransactions}
+              className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {fetchingTransactions ? '수집 중...' : '실거래가 수집'}
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
+            >
+              {deleting ? '삭제 중...' : '단지 삭제'}
+            </button>
+          </div>
         </div>
         <div className="mt-3 space-y-2">
           {/* 도로명 주소 */}
@@ -325,6 +397,46 @@ export default function ComplexDetailPage() {
         </div>
       )}
 
+      {/* 탭 메뉴 */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="border-b border-gray-200">
+          <nav className="flex -mb-px">
+            <button
+              onClick={() => setActiveTab('articles')}
+              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'articles'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                매물 정보
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('transactions')}
+              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'transactions'
+                  ? 'border-purple-500 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                실거래가 분석
+              </div>
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      {/* 탭 컨텐츠 - 매물 정보 */}
+      {activeTab === 'articles' && (<>
       {/* 면적별 가격 정보 */}
       {complex.articles && complex.articles.length > 0 && (() => {
         // 면적별 가격 통계 계산
@@ -822,6 +934,109 @@ export default function ComplexDetailPage() {
           </>
         );
       })()}
+      </>)}
+
+      {/* 탭 컨텐츠 - 실거래가 분석 */}
+      {activeTab === 'transactions' && (
+        <div className="space-y-6">
+          {transactionAreaStats && transactionAreaStats.area_stats && transactionAreaStats.area_stats.length > 0 ? (
+            <>
+              {/* 평형별 실거래가 통계 */}
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="px-6 py-4 border-b bg-gradient-to-r from-purple-50 to-indigo-50">
+                  <h2 className="text-xl font-semibold text-gray-900">평형별 실거래가 통계 (최근 6개월)</h2>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {transactionAreaStats.area_stats.map((areaStat: any) => (
+                      <div key={areaStat.area_name} className="border rounded-lg p-4 bg-gradient-to-br from-white to-purple-50">
+                        <div className="text-lg font-semibold text-gray-900 mb-3">{areaStat.area_name}</div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">평균가</span>
+                            <span className="font-semibold text-purple-600">{areaStat.avg_price.toLocaleString()}만원</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">최고가</span>
+                            <span className="font-medium text-blue-600">{areaStat.max_price.toLocaleString()}만원</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">최저가</span>
+                            <span className="font-medium text-green-600">{areaStat.min_price.toLocaleString()}만원</span>
+                          </div>
+                          <div className="flex justify-between text-sm pt-2 border-t">
+                            <span className="text-gray-600">거래건수</span>
+                            <span className="font-semibold text-gray-900">{areaStat.count}건</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 실거래가 목록 */}
+              {transactions.length > 0 && (
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="px-6 py-4 border-b">
+                    <h2 className="text-xl font-semibold text-gray-900">최근 실거래 내역</h2>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">거래일</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">평형</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">거래가</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">층</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {transactions.map((tx: any, idx: number) => (
+                          <tr key={idx} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {tx.trade_date?.replace(/(\d{4})(\d{2})(\d{2})/, '$1.$2.$3')}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {tx.exclusive_area}㎡
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-purple-600">
+                              {tx.deal_price.toLocaleString()}만원
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {tx.floor}층
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="bg-white rounded-lg shadow p-12 text-center">
+              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <h3 className="mt-4 text-lg font-medium text-gray-900">실거래가 데이터가 없습니다</h3>
+              <p className="mt-2 text-sm text-gray-500">
+                상단의 "실거래가 수집" 버튼을 클릭하여 국토부 API에서 데이터를 수집하세요.
+              </p>
+              <button
+                onClick={handleFetchTransactions}
+                disabled={fetchingTransactions}
+                className="mt-6 bg-purple-600 text-white px-6 py-3 rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed inline-flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {fetchingTransactions ? '수집 중...' : '실거래가 수집하기'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
     </div>
   );

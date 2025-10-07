@@ -168,14 +168,28 @@ def get_complex_stats(
         Transaction.complex_id == complex_id
     ).order_by(Transaction.trade_date.desc()).first()
 
+    # Note: Article prices are stored as strings (e.g. "3억 5,000") so we cannot calculate min/max
+    # Price range information comes from Complex table fields
+
     return {
         "complex_id": complex_id,
         "complex_name": complex_obj.complex_name,
+        "total_households": complex_obj.total_households,
         "articles": {
             "total": total_articles,
             "sale": sale_count,
             "lease": lease_count,
             "monthly": monthly_count,
+        },
+        "price_range": {
+            "sale_min": complex_obj.min_price,
+            "sale_max": complex_obj.max_price,
+            "lease_min": complex_obj.min_lease_price,
+            "lease_max": complex_obj.max_lease_price,
+            "monthly_deposit_min": None,  # Not available in complex table
+            "monthly_deposit_max": None,
+            "monthly_rent_min": None,
+            "monthly_rent_max": None,
         },
         "transactions": {
             "total": total_transactions,

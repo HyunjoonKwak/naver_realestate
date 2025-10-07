@@ -36,6 +36,9 @@ export default function RootLayout({
                   <a href="/transactions" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
                     실거래가
                   </a>
+                  <a href="/scheduler" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
+                    스케줄러
+                  </a>
                 </div>
               </div>
             </div>
