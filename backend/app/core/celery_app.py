@@ -15,7 +15,7 @@ celery_app = Celery(
     "naver_realestate",
     broker=REDIS_URL,
     backend=REDIS_URL,
-    include=["app.tasks.scheduler"]
+    include=["app.tasks.scheduler", "app.tasks.briefing_tasks"]
 )
 
 # Celery 설정
@@ -50,6 +50,12 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.scheduler.cleanup_old_snapshots",
         "schedule": crontab(hour=2, minute=0, day_of_week=1),  # 매주 월요일 02:00
         "options": {"expires": 7200},
+    },
+    # 매주 월요일 오전 9시에 주간 브리핑 발송
+    "send-weekly-briefing": {
+        "task": "app.tasks.briefing_tasks.send_weekly_briefing",
+        "schedule": crontab(hour=9, minute=0, day_of_week=1),  # 매주 월요일 09:00
+        "options": {"expires": 3600},
     },
 }
 

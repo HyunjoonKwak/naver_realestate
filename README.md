@@ -20,15 +20,20 @@
   - 💹 면적별 가격 정보 카드
   - 📱 반응형 디자인 (모바일/태블릿/데스크톱)
 
+### ✅ 최근 완료 (2025-10-07)
+- 📧 **주간 브리핑 시스템**: 매물 변동사항 자동 요약 및 알림
+  - Slack/Discord Webhook 연동
+  - 매주 월요일 09:00 자동 발송
+  - 신규/삭제/가격변동 통계
+  - REST API로 수동 발송 가능
+
 ### 🚧 개발 예정
 - 🏛️ **실거래가 기능**: 국토부 실거래가 공개시스템 연동
   - 국토교통부 오픈API 활용
   - 아파트 실거래가 조회 및 DB 저장
   - 가격 추이 차트 및 분석
-- 📈 **주간 브리핑**: 단지별 변동사항 요약 (매물 증감, 가격 변동, 특이사항)
-- ⏰ **자동 스케줄링**: Celery 기반 정기 크롤링
+- ⏰ **자동 스케줄링 확장**: Celery 스케줄 웹 관리 페이지
 - 🤖 **가격 분석**: 최적 매매 시기 추천
-- 🔔 **알림 기능**: 가격 변동 알림
 - 🔐 **사용자 인증**: 개인화 및 관심 단지 관리
 
 ## 🚀 빠른 시작
@@ -62,7 +67,19 @@ npm run dev
 - 네이버 부동산 URL 입력 (예: `https://new.land.naver.com/complexes/1482`)
 - 크롤링이 백그라운드에서 자동 실행됩니다
 
-### 6. 참고
+### 6. 주간 브리핑 설정 (선택사항)
+```bash
+# .env 파일 생성 및 Webhook URL 설정
+cp .env.example .env
+# 에디터로 .env 열어서 SLACK_WEBHOOK_URL 또는 DISCORD_WEBHOOK_URL 설정
+
+# Celery Worker & Beat 시작
+cd backend
+./run_celery_worker.sh  # 새 터미널 1
+./run_celery_beat.sh     # 새 터미널 2
+```
+
+### 7. 참고
 - **API 문서**: http://localhost:8000/docs 📖
 - **크롤링 직접 실행**: `backend/.venv/bin/python advanced_crawler.py`
 
@@ -123,8 +140,9 @@ naver_realestate/
 - [프로젝트 개요](docs/PROJECT_OVERVIEW.md)
 - [진행 상황 요약](docs/PROGRESS_SUMMARY.md)
 - [API 가이드](docs/API_GUIDE.md) ⭐
-- [국토부 실거래가 API 연동](docs/MOLIT_API_INTEGRATION.md) 🆕
-- [주간 브리핑 기능 설계](docs/WEEKLY_BRIEFING_FEATURE.md) 🆕
+- [Webhook 설정 가이드](docs/WEBHOOK_SETUP_GUIDE.md) 🆕
+- [국토부 실거래가 API 연동](docs/MOLIT_API_INTEGRATION.md)
+- [주간 브리핑 기능 설계](docs/WEEKLY_BRIEFING_FEATURE.md)
 - [구현 체크리스트](docs/IMPLEMENTATION_CHECKLIST.md)
 - [Docker 가이드](docs/SETUP_GUIDE.md)
 
