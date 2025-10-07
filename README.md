@@ -22,7 +22,7 @@
 
 ### ✅ 최근 완료 (2025-10-07)
 - 📧 **주간 브리핑 시스템**: 매물 변동사항 자동 요약 및 알림
-  - Slack/Discord Webhook 연동
+  - Discord Webhook 연동
   - 매주 월요일 09:00 자동 발송
   - 신규/삭제/가격변동 통계
   - REST API로 수동 발송 가능
@@ -69,9 +69,9 @@ npm run dev
 
 ### 6. 주간 브리핑 설정 (선택사항)
 ```bash
-# .env 파일 생성 및 Webhook URL 설정
+# .env 파일 생성 및 Discord Webhook URL 설정
 cp .env.example .env
-# 에디터로 .env 열어서 SLACK_WEBHOOK_URL 또는 DISCORD_WEBHOOK_URL 설정
+# 에디터로 .env 열어서 DISCORD_WEBHOOK_URL 설정
 
 # Celery Worker & Beat 시작
 cd backend
