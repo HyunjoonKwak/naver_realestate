@@ -1,43 +1,10 @@
-FROM python:3.13-slim
+FROM mcr.microsoft.com/playwright/python:v1.49.0-noble
 
 WORKDIR /app
-
-# systemd 설치 방지 설정
-RUN echo 'exit 101' > /usr/sbin/policy-rc.d && \
-    chmod +x /usr/sbin/policy-rc.d
-
-# 시스템 패키지 설치 (Playwright 브라우저용)
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    wget \
-    gnupg \
-    ca-certificates \
-    fonts-liberation \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libatspi2.0-0 \
-    libcups2 \
-    libdbus-1-3 \
-    libdrm2 \
-    libgbm1 \
-    libgtk-3-0 \
-    libnspr4 \
-    libnss3 \
-    libwayland-client0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxfixes3 \
-    libxkbcommon0 \
-    libxrandr2 \
-    && rm -rf /var/lib/apt/lists/*
 
 # Python 패키지 설치
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Playwright 브라우저 설치 (Chromium만)
-RUN playwright install chromium
-RUN playwright install-deps chromium
 
 # 애플리케이션 코드 복사
 COPY . .

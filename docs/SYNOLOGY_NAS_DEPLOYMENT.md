@@ -524,22 +524,23 @@ sudo docker-compose restart api
 
 **증상:** Docker 빌드 중 "Failed to take /etc/passwd lock" 또는 systemd 관련 오류
 
-**원인:** Docker 컨테이너 내부에서 systemd 설치 시 충돌
+**원인:** Playwright 의존성 설치 시 systemd가 포함되어 Docker 컨테이너에서 충돌
 
-**해결:** Dockerfile이 이미 수정되어 있으므로, 최신 버전으로 업데이트
+**해결:** Microsoft 공식 Playwright Python 이미지 사용 (이미 수정됨)
 ```bash
 # 프로젝트 업데이트
-cd /volume1/docker/naver_realestate
+cd /volume1/code_work/naver_realestate
 sudo git pull
-
-# 또는 Dockerfile을 직접 수정
-sudo nano backend/Dockerfile
-# DEBIAN_FRONTEND=noninteractive와 --no-install-recommends 옵션 추가 확인
 
 # 빌드 캐시 삭제 후 재빌드
 sudo docker-compose build --no-cache api
 sudo docker-compose up -d
+
+# 로그 확인
+sudo docker-compose logs -f api
 ```
+
+**참고:** backend/Dockerfile이 `mcr.microsoft.com/playwright/python:v1.49.0-noble` 이미지를 사용하도록 변경되었습니다. 이 이미지는 Playwright와 Chromium이 사전 설치되어 있어 빌드 시간도 단축됩니다.
 
 ---
 
