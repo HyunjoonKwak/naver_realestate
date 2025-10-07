@@ -39,11 +39,35 @@
 **확인 방법:**
 - DSM → 제어판 → 정보 센터 → 일반
 
-### 2. DSM 버전
-- **DSM 7.0 이상** 필요 (Container Manager 지원)
+### 2. DSM 버전 및 Docker 패키지명
+
+| DSM 버전 | 패키지명 (모델에 따라 다름) | 비고 |
+|----------|---------------------------|------|
+| **DSM 7.2+** | Container Manager 또는 Docker | 최신 버전 |
+| **DSM 7.0-7.1** | Container Manager 또는 Docker | 모델에 따라 다름 |
+| **DSM 6.x** | Docker | 구 버전 |
+
+**패키지 센터에서 확인:**
+- "Container Manager" 검색 → 없으면
+- "Docker" 검색 → **있으면 Docker 사용하세요!**
+
+> ⚠️ **중요**: DSM 7.x이더라도 모델에 따라 "Docker"로 표시될 수 있습니다.
+> 예: DS716+II (DSM 7.1.1) → "Docker" 사용 ✅
+> 두 패키지는 동일한 기능을 제공하며, 이름만 다릅니다.
+
+**DSM 버전 확인:**
+- DSM → 제어판 → 정보 센터 → 일반
+- 또는 좌측 상단 DSM 로고 클릭
 
 ### 3. 필요한 패키지
-- Container Manager (Docker)
+
+**DSM 7.0 이상:**
+- ✅ **Container Manager** (필수)
+- Git Server (선택)
+- Web Station (선택)
+
+**DSM 6.x:**
+- ✅ **Docker** (필수)
 - Git Server (선택)
 - Web Station (선택)
 
@@ -51,7 +75,7 @@
 
 ## 🚀 배포 방법
 
-### 방법 1: Docker Container Manager (추천) ⭐
+### 방법 1: Docker / Container Manager (추천) ⭐
 
 **장점:**
 - ✅ 웹 UI로 쉬운 관리
@@ -59,102 +83,27 @@
 - ✅ 리소스 모니터링
 - ✅ 로그 확인 간편
 
-#### 1-1. Container Manager 설치
+#### 1-1. Docker 패키지 설치
 
+**모든 DSM 버전 (간단한 방법):**
 1. DSM → 패키지 센터
-2. "Container Manager" 검색 및 설치
+2. 검색창에 "**Docker**" 입력 및 설치
 3. 실행
 
-#### 1-2. docker-compose.yml 업로드
+> 💡 **패키지 이름 참고**:
+> - 일부 최신 모델: "Container Manager"로 표시
+> - 대부분의 모델: "Docker"로 표시
+> - DS716+II (DSM 7.1.1) → "Docker" ✅
+> - **두 이름 모두 동일한 기능입니다**
 
-**방법 A: File Station 사용**
+> ⚠️ **찾을 수 없는 경우**:
+> - NAS 모델이 Docker를 지원하지 않을 수 있습니다
+> - ARM 기반 일부 모델은 제한이 있습니다
+> - CPU가 Intel/AMD x64가 아닌 경우 확인 필요
 
-1. File Station → `docker` 폴더 생성
-2. `docker/naver_realestate` 폴더 생성
-3. `docker-compose.yml` 업로드
+#### 1-2. 프로젝트 코드 업로드
 
-```yaml
-# docker-compose.yml
-version: '3.8'
-
-services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: naver_db
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: your_password
-      POSTGRES_DB: naver_realestate
-    volumes:
-      - /volume1/docker/naver_realestate/postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    restart: always
-
-  redis:
-    image: redis:7-alpine
-    container_name: naver_redis
-    volumes:
-      - /volume1/docker/naver_realestate/redis_data:/data
-    ports:
-      - "6379:6379"
-    restart: always
-
-  api:
-    image: python:3.11-slim
-    container_name: naver_api
-    working_dir: /app
-    volumes:
-      - /volume1/docker/naver_realestate/backend:/app
-    environment:
-      DATABASE_URL: postgresql://postgres:your_password@postgres:5432/naver_realestate
-      REDIS_URL: redis://redis:6379/0
-    ports:
-      - "8000:8000"
-    command: >
-      sh -c "
-        pip install -r requirements.txt &&
-        uvicorn app.main:app --host 0.0.0.0 --port 8000
-      "
-    depends_on:
-      - postgres
-      - redis
-    restart: always
-
-  frontend:
-    image: node:18-alpine
-    container_name: naver_frontend
-    working_dir: /app
-    volumes:
-      - /volume1/docker/naver_realestate/frontend:/app
-    environment:
-      NEXT_PUBLIC_API_URL: http://your-nas-ip:8000
-      PORT: 3000
-    ports:
-      - "3000:3000"
-    command: >
-      sh -c "
-        npm install &&
-        npm run build &&
-        npm start
-      "
-    depends_on:
-      - api
-    restart: always
-```
-
-#### 1-3. Container Manager에서 실행
-
-1. Container Manager → 프로젝트
-2. "생성" 클릭
-3. 프로젝트 이름: `naver_realestate`
-4. 경로: `/docker/naver_realestate`
-5. 소스: "docker-compose.yml 업로드"
-6. "실행" 클릭
-
-#### 1-4. 코드 배포
-
-**SSH 접속 (권장)**
+**방법 A: SSH를 통한 Git Clone (권장)**
 
 ```bash
 # 1. SSH 활성화: DSM → 제어판 → 터미널 및 SNMP → SSH 서비스 활성화
@@ -162,54 +111,121 @@ services:
 # 2. SSH 접속
 ssh admin@your-nas-ip
 
-# 3. 프로젝트 디렉토리로 이동
-cd /volume1/docker/naver_realestate
+# 3. Docker 디렉토리로 이동
+cd /volume1/docker
 
 # 4. Git clone
-sudo git clone https://github.com/your-username/naver_realestate.git temp
-sudo mv temp/backend .
-sudo mv temp/frontend .
-sudo rm -rf temp
+sudo git clone https://github.com/your-username/naver_realestate.git
 
-# 5. 컨테이너 재시작
-docker-compose restart
+# 5. 환경변수 파일 생성
+cd naver_realestate
+sudo nano .env
+```
+
+**.env 파일 내용:**
+```bash
+# MOLIT API 키 (필수)
+MOLIT_API_KEY=your_molit_api_key_here
+
+# Discord 웹훅 (선택)
+DISCORD_WEBHOOK_URL=your_discord_webhook_url_here
+```
+
+**방법 B: File Station 사용**
+
+1. File Station → `docker` 폴더로 이동
+2. 프로젝트 폴더 전체를 압축(ZIP)하여 업로드
+3. 압축 해제
+4. `.env` 파일 생성 (위 내용 참고)
+
+#### 1-3. Docker 이미지 빌드 및 실행
+
+**SSH로 빌드 (권장)**
+
+```bash
+# 1. 프로젝트 디렉토리로 이동
+cd /volume1/docker/naver_realestate
+
+# 2. .env 파일이 있는지 확인
+cat .env
+
+# 3. Docker Compose로 빌드 및 시작
+sudo docker-compose up -d --build
+
+# 4. 컨테이너 상태 확인
+sudo docker-compose ps
+
+# 5. 로그 확인
+sudo docker-compose logs -f api
+```
+
+**Container Manager UI 사용**
+
+1. Container Manager → 프로젝트
+2. "생성" 클릭
+3. 프로젝트 이름: `naver_realestate`
+4. 경로: `/volume1/docker/naver_realestate` 선택
+5. 소스: "기존 docker-compose.yml 사용"
+6. "실행" 클릭
+
+#### 1-4. 데이터베이스 초기화
+
+```bash
+# SSH 접속 후 실행
+cd /volume1/docker/naver_realestate
+
+# 데이터베이스 마이그레이션 (Foreign Keys 적용)
+sudo docker-compose exec api python migrate_db.py
+
+# 또는 테이블만 재생성 (Legacy)
+# sudo docker-compose exec api python reset_db.py
 ```
 
 ---
 
-### 방법 2: Task Scheduler (스크립트 실행)
+### 방법 2: 컨테이너 관리 및 모니터링
 
-**장점:**
-- ✅ 정기 크롤링 자동화
-- ✅ 재부팅 시 자동 시작
-
-#### 2-1. 스크립트 작성
+#### 2-1. 컨테이너 관리 명령어
 
 ```bash
-# /volume1/docker/naver_realestate/start.sh
-#!/bin/bash
-
+# SSH 접속 후 프로젝트 디렉토리로 이동
 cd /volume1/docker/naver_realestate
 
-# Docker Compose 시작
-docker-compose up -d
+# 전체 컨테이너 시작
+sudo docker-compose up -d
 
-# 크롤링 (선택)
-# docker exec naver_api python advanced_crawler.py
+# 전체 컨테이너 중지
+sudo docker-compose down
+
+# 특정 컨테이너 재시작
+sudo docker-compose restart api
+sudo docker-compose restart celery_worker
+
+# 컨테이너 상태 확인
+sudo docker-compose ps
+
+# 로그 확인 (실시간)
+sudo docker-compose logs -f api
+sudo docker-compose logs -f celery_worker
+sudo docker-compose logs -f celery_beat
+
+# 특정 컨테이너에 접속
+sudo docker-compose exec api bash
+sudo docker-compose exec postgres psql -U postgres -d naver_realestate
 ```
 
-#### 2-2. Task Scheduler 설정
+#### 2-2. Task Scheduler로 자동 시작 설정
 
 1. DSM → 제어판 → 작업 스케줄러
 2. "생성" → 예약된 작업 → 사용자 정의 스크립트
 3. 일반 설정:
-   - 작업: `Naver Realestate Start`
+   - 작업: `Naver Realestate Auto Start`
    - 사용자: `root`
 4. 스케줄:
    - 부팅 시 실행
 5. 작업 설정:
    ```bash
-   bash /volume1/docker/naver_realestate/start.sh
+   cd /volume1/docker/naver_realestate && docker-compose up -d
    ```
 
 ---
@@ -481,25 +497,34 @@ node:18-alpine      # 170MB vs 1GB
 - CPU: Intel/AMD (Docker 지원)
 - 메모리: 4GB+
 - DSM: 7.0+
+- 저장 공간: 10GB+ (Docker 이미지 + 데이터)
 
 ### 권장 설정
 ```yaml
 프로젝트 구조:
 /volume1/docker/naver_realestate/
 ├── docker-compose.yml
+├── .env                      # 환경변수 (필수)
 ├── backend/
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   ├── app/
+│   └── migrate_db.py
 ├── frontend/
-├── postgres_data/
-├── redis_data/
-└── backups/
+│   ├── Dockerfile
+│   ├── package.json
+│   └── src/
+└── docs/
 
-컨테이너:
-- PostgreSQL: 512MB 메모리 제한
-- Redis: 256MB 메모리 제한
-- API: 512MB 메모리 제한
-- Frontend: 512MB 메모리 제한
+실행 중인 컨테이너:
+- naver_realestate_db          (PostgreSQL)
+- naver_realestate_redis        (Redis)
+- naver_realestate_api          (FastAPI 백엔드)
+- naver_realestate_celery_worker (크롤링 워커)
+- naver_realestate_celery_beat   (스케줄러)
+- naver_realestate_frontend     (Next.js 프론트엔드)
 
-총 메모리 사용: ~2GB
+총 메모리 사용: ~3GB
 ```
 
 ### 외부 접속
@@ -523,41 +548,84 @@ node:18-alpine      # 170MB vs 1GB
 
 ---
 
+## 🚀 빠른 시작 가이드 (5분)
+
+### 1단계: NAS 준비
+```bash
+# DSM → 패키지 센터 → Container Manager 설치
+# DSM → 제어판 → 터미널 및 SNMP → SSH 활성화
+```
+
+### 2단계: SSH 접속 및 프로젝트 Clone
+```bash
+ssh admin@your-nas-ip
+cd /volume1/docker
+sudo git clone https://github.com/your-username/naver_realestate.git
+cd naver_realestate
+```
+
+### 3단계: 환경변수 설정
+```bash
+# .env.example을 복사하여 .env 생성
+sudo cp .env.example .env
+sudo nano .env
+
+# MOLIT_API_KEY를 실제 값으로 변경
+# 저장: Ctrl+O, 종료: Ctrl+X
+```
+
+### 4단계: Docker Compose 실행
+```bash
+# 빌드 및 시작 (최초 5-10분 소요)
+sudo docker-compose up -d --build
+
+# 상태 확인
+sudo docker-compose ps
+
+# 로그 확인
+sudo docker-compose logs -f
+```
+
+### 5단계: 데이터베이스 마이그레이션
+```bash
+# 데이터베이스 테이블 생성
+sudo docker-compose exec api python migrate_db.py
+```
+
+### 6단계: 접속 확인
+- API: http://your-nas-ip:8000/docs
+- Frontend: http://your-nas-ip:3000
+
+완료! 🎉
+
+---
+
 ## ✅ 최종 체크리스트
 
-### 초기 설정
+### 필수 설정 (5분)
 - [ ] Container Manager 설치
 - [ ] SSH 활성화
-- [ ] 프로젝트 폴더 생성
-- [ ] docker-compose.yml 업로드
+- [ ] Git clone 프로젝트
+- [ ] .env 파일 생성 및 MOLIT_API_KEY 설정
+- [ ] `docker-compose up -d --build` 실행
+- [ ] 데이터베이스 마이그레이션 (`migrate_db.py`)
+- [ ] 웹 브라우저로 접속 확인
 
-### 배포
-- [ ] 코드 업로드 (Git clone)
-- [ ] 환경 변수 설정 (.env)
-- [ ] 컨테이너 시작
-- [ ] 데이터베이스 초기화
+### 선택 설정 (추가 10분)
+- [ ] QuickConnect 외부 접속 설정
+- [ ] Task Scheduler 부팅 시 자동 시작
+- [ ] Hyper Backup 자동 백업 설정
+- [ ] Reverse Proxy + SSL 인증서 (HTTPS)
 
-### 외부 접속
-- [ ] QuickConnect 설정
-- [ ] DDNS 설정 (선택)
-- [ ] 포트 포워딩 (선택)
-- [ ] Reverse Proxy (선택)
-- [ ] SSL 인증서 (선택)
-
-### 보안
-- [ ] 방화벽 설정
-- [ ] 2단계 인증
-- [ ] SSL 인증서
-
-### 자동화
-- [ ] 부팅 시 자동 시작
-- [ ] 정기 백업
-- [ ] 정기 크롤링
+### 보안 설정
+- [ ] 방화벽 규칙 (필요한 포트만 허용)
+- [ ] 2단계 인증 활성화
+- [ ] SSH 포트 변경 (선택)
 
 ### 모니터링
-- [ ] Resource Monitor 확인
-- [ ] 컨테이너 로그 확인
-- [ ] 백업 확인
+- [ ] Container Manager에서 리소스 사용량 확인
+- [ ] 로그 주기적 확인 (`docker-compose logs`)
+- [ ] 백업 정상 동작 확인
 
 ---
 
