@@ -31,33 +31,15 @@ celery_app.conf.update(
     worker_max_tasks_per_child=50,
 )
 
-# 주기적 작업 스케줄 설정
-celery_app.conf.beat_schedule = {
-    # 매일 오전 6시에 모든 단지 크롤링
-    "crawl-all-complexes-morning": {
-        "task": "app.tasks.scheduler.crawl_all_complexes",
-        "schedule": crontab(hour=6, minute=0),  # 매일 06:00
-        "options": {"expires": 3600},  # 1시간 내에 실행되지 않으면 취소
-    },
-    # 매일 오후 6시에 모든 단지 크롤링
-    "crawl-all-complexes-evening": {
-        "task": "app.tasks.scheduler.crawl_all_complexes",
-        "schedule": crontab(hour=18, minute=0),  # 매일 18:00
-        "options": {"expires": 3600},
-    },
-    # 매주 월요일 오전 2시에 오래된 스냅샷 정리
-    "cleanup-old-snapshots": {
-        "task": "app.tasks.scheduler.cleanup_old_snapshots",
-        "schedule": crontab(hour=2, minute=0, day_of_week=1),  # 매주 월요일 02:00
-        "options": {"expires": 7200},
-    },
-    # 매주 월요일 오전 9시에 주간 브리핑 발송
-    "send-weekly-briefing": {
-        "task": "app.tasks.briefing_tasks.send_weekly_briefing",
-        "schedule": crontab(hour=9, minute=0, day_of_week=1),  # 매주 월요일 09:00
-        "options": {"expires": 3600},
-    },
-}
+# 주기적 작업 스케줄 설정 - JSON 파일에서 로드
+try:
+    from app.core.schedule_manager import load_schedules_from_file
+    celery_app.conf.beat_schedule = load_schedules_from_file()
+    print(f"✅ 스케줄 로드 완료: {len(celery_app.conf.beat_schedule)}개")
+except Exception as e:
+    print(f"⚠️  스케줄 로드 실패: {e}")
+    # 로드 실패 시 빈 스케줄로 시작
+    celery_app.conf.beat_schedule = {}
 
 # Celery beat 설정 (스케줄러)
 celery_app.conf.beat_scheduler = "celery.beat:PersistentScheduler"

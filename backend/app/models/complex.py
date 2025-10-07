@@ -201,3 +201,52 @@ class ArticleChange(Base):
 
     def __repr__(self):
         return f"<ArticleChange(type={self.change_type}, article={self.article_no})>"
+
+class CrawlJob(Base):
+    """크롤링 작업 이력"""
+    __tablename__ = "crawl_jobs"
+
+    id = Column(BigInteger, primary_key=True, index=True)
+    job_id = Column(String(100), unique=True, index=True, nullable=False, comment="작업 ID (UUID)")
+    job_type = Column(String(20), index=True, nullable=False, comment="작업 유형: manual, scheduled, all")
+    
+    # 작업 대상
+    complex_id = Column(String(50), ForeignKey('complexes.complex_id', ondelete='SET NULL'), comment="단지 ID")
+    complex_name = Column(String(200), comment="단지명")
+    
+    # 작업 상태
+    status = Column(String(20), index=True, default='pending', comment="상태: pending, running, success, failed")
+    
+    # 시간 정보
+    started_at = Column(DateTime(timezone=True), index=True, comment="시작 시각")
+    finished_at = Column(DateTime(timezone=True), comment="종료 시각")
+    duration_seconds = Column(Integer, comment="소요 시간(초)")
+    
+    # 크롤링 결과
+    articles_collected = Column(Integer, default=0, comment="수집된 매물 수")
+    articles_new = Column(Integer, default=0, comment="신규 매물 수")
+    articles_updated = Column(Integer, default=0, comment="업데이트된 매물 수")
+    articles_removed = Column(Integer, default=0, comment="삭제된 매물 수")
+    
+    # 오류 정보
+    error_message = Column(Text, comment="오류 메시지")
+    error_traceback = Column(Text, comment="오류 스택 트레이스")
+    
+    # Celery 태스크 정보
+    celery_task_id = Column(String(100), comment="Celery 태스크 ID")
+    
+    # 생성 시각
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    def __repr__(self):
+        return f"<CrawlJob(id={self.job_id}, type={self.job_type}, status={self.status})>"
+    
+    @property
+    def is_finished(self) -> bool:
+        """작업 완료 여부"""
+        return self.status in ['success', 'failed']
+    
+    @property
+    def is_running(self) -> bool:
+        """작업 실행 중 여부"""
+        return self.status == 'running'

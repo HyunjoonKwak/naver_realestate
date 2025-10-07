@@ -19,8 +19,8 @@ export default function TransactionsPage() {
   useEffect(() => {
     const fetchComplexes = async () => {
       try {
-        const data = await complexAPI.getList();
-        setComplexes(data);
+        const response = await complexAPI.getAll();
+        setComplexes(response.data);
       } catch (error) {
         console.error('단지 로딩 실패:', error);
       }
@@ -43,8 +43,8 @@ export default function TransactionsPage() {
         if (minPrice) params.min_price = parseInt(minPrice) * 10000;
         if (maxPrice) params.max_price = parseInt(maxPrice) * 10000;
 
-        const data = await transactionAPI.search(params);
-        setTransactions(data);
+        const response = await transactionAPI.search(params);
+        setTransactions(response.data);
       } catch (error) {
         console.error('실거래가 로딩 실패:', error);
       } finally {
@@ -144,6 +144,9 @@ export default function TransactionsPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    단지명
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     거래일
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -160,6 +163,9 @@ export default function TransactionsPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {transactions.map((transaction) => (
                   <tr key={transaction.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {transaction.complex_name || '-'}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {transaction.trade_date?.replace(/(\d{4})(\d{2})(\d{2})/, '$1.$2.$3')}
                     </td>

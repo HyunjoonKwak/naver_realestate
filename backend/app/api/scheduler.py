@@ -1,12 +1,21 @@
 """
 스케줄러 관리 API
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import Dict, Any, Optional
 from pydantic import BaseModel
+from datetime import datetime, timedelta
+from sqlalchemy.orm import Session
 from celery.schedules import crontab
 from app.core.celery_app import celery_app
+from app.core.database import get_db
+from app.models.complex import CrawlJob
 from app.tasks.scheduler import crawl_all_complexes, crawl_complex_async
+from app.core.schedule_manager import (
+    update_schedule_in_file,
+    delete_schedule_from_file,
+    get_schedule_raw_data
+)
 
 router = APIRouter(prefix="/api/scheduler", tags=["scheduler"])
 
@@ -33,14 +42,14 @@ class ScheduleUpdate(BaseModel):
 @router.post("/trigger/all", response_model=Dict[str, Any])
 def trigger_crawl_all():
     """
-    모든 단지 크롤링을 즉시 실행
+    모든 단지 크롤링을 즉시 실행 (수동 실행)
 
     Returns:
         작업 ID 및 상태
     """
     try:
-        # 비동기 태스크 실행
-        task = crawl_all_complexes.delay()
+        # 비동기 태스크 실행 (수동 실행이므로 job_type='manual')
+        task = crawl_all_complexes.delay(job_type='manual')
 
         return {
             "task_id": task.id,
@@ -187,7 +196,9 @@ def create_schedule(schedule: ScheduleCreate):
         # 태스크 이름 검증
         available_tasks = [
             "app.tasks.scheduler.crawl_all_complexes",
-            "app.tasks.scheduler.cleanup_old_snapshots"
+            "app.tasks.scheduler.cleanup_old_snapshots",
+            "app.tasks.briefing_tasks.send_weekly_briefing",
+            "app.tasks.briefing_tasks.send_custom_briefing"
         ]
 
         if schedule.task not in available_tasks:
@@ -213,12 +224,27 @@ def create_schedule(schedule: ScheduleCreate):
                 day_of_week=schedule.day_of_week
             )
 
-        # 스케줄 추가
+        # 스케줄 추가 (메모리)
         celery_app.conf.beat_schedule[schedule.name] = {
             "task": schedule.task,
             "schedule": schedule_obj,
             "options": {"expires": 3600}
         }
+
+        # JSON 파일에 저장 (영구 저장)
+        schedule_data = {
+            "task": schedule.task,
+            "schedule": {
+                "hour": schedule.hour,
+                "minute": schedule.minute,
+                "day_of_week": schedule.day_of_week
+            },
+            "enabled": True,
+            "description": schedule.description or ""
+        }
+
+        if not update_schedule_in_file(schedule.name, schedule_data):
+            raise HTTPException(status_code=500, detail="스케줄 파일 저장에 실패했습니다.")
 
         return {
             "message": f"스케줄 '{schedule.name}'이 생성되었습니다.",
@@ -230,7 +256,7 @@ def create_schedule(schedule: ScheduleCreate):
                 "day_of_week": schedule.day_of_week,
                 "description": schedule.description
             },
-            "note": "변경사항을 적용하려면 Celery Beat를 재시작해야 합니다."
+            "note": "변경사항이 저장되었습니다. Celery Beat를 재시작하면 적용됩니다."
         }
     except HTTPException:
         raise
@@ -285,9 +311,21 @@ def update_schedule(schedule_name: str, schedule_update: ScheduleUpdate):
         else:
             new_schedule = crontab(hour=hour, minute=minute, day_of_week=day_of_week)
 
-        # 스케줄 업데이트
+        # 스케줄 업데이트 (메모리)
         celery_app.conf.beat_schedule[schedule_name]["schedule"] = new_schedule
         celery_app.conf.beat_schedule[schedule_name]["task"] = task
+
+        # JSON 파일에 저장 (영구 저장)
+        schedules_data = get_schedule_raw_data()
+        if schedule_name in schedules_data:
+            # 기존 스케줄 업데이트
+            schedules_data[schedule_name]["task"] = task
+            schedules_data[schedule_name]["schedule"]["hour"] = hour
+            schedules_data[schedule_name]["schedule"]["minute"] = minute
+            schedules_data[schedule_name]["schedule"]["day_of_week"] = str(day_of_week)
+
+            if not update_schedule_in_file(schedule_name, schedules_data[schedule_name]):
+                raise HTTPException(status_code=500, detail="스케줄 파일 저장에 실패했습니다.")
 
         return {
             "message": f"스케줄 '{schedule_name}'이 수정되었습니다.",
@@ -298,7 +336,7 @@ def update_schedule(schedule_name: str, schedule_update: ScheduleUpdate):
                 "minute": minute,
                 "day_of_week": day_of_week
             },
-            "note": "변경사항을 적용하려면 Celery Beat를 재시작해야 합니다."
+            "note": "변경사항이 저장되었습니다. Celery Beat를 재시작하면 적용됩니다."
         }
     except HTTPException:
         raise
@@ -325,14 +363,434 @@ def delete_schedule(schedule_name: str):
                 detail=f"'{schedule_name}' 스케줄을 찾을 수 없습니다."
             )
 
-        # 스케줄 삭제
+        # 스케줄 삭제 (메모리)
         del celery_app.conf.beat_schedule[schedule_name]
+
+        # JSON 파일에서 삭제 (영구 삭제)
+        if not delete_schedule_from_file(schedule_name):
+            raise HTTPException(status_code=500, detail="스케줄 파일 저장에 실패했습니다.")
 
         return {
             "message": f"스케줄 '{schedule_name}'이 삭제되었습니다.",
-            "note": "변경사항을 적용하려면 Celery Beat를 재시작해야 합니다."
+            "note": "변경사항이 저장되었습니다. Celery Beat를 재시작하면 적용됩니다."
         }
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"스케줄 삭제 실패: {str(e)}")
+
+# ========== 작업 이력 관리 API ==========
+
+@router.get("/jobs", response_model=Dict[str, Any])
+def get_job_history(
+    limit: int = 50,
+    status: Optional[str] = None,
+    job_type: Optional[str] = None
+):
+    """
+    크롤링 작업 이력 조회
+
+    Args:
+        limit: 조회할 작업 수 (기본: 50)
+        status: 상태 필터 (pending, running, success, failed)
+        job_type: 작업 유형 필터 (manual, scheduled, all)
+
+    Returns:
+        작업 이력 목록
+    """
+    from app.core.database import SessionLocal
+    from app.models.complex import CrawlJob
+    from sqlalchemy import desc
+
+    try:
+        db = SessionLocal()
+
+        query = db.query(CrawlJob)
+
+        # 필터 적용
+        if status:
+            query = query.filter(CrawlJob.status == status)
+        if job_type:
+            query = query.filter(CrawlJob.job_type == job_type)
+
+        # 최신순 정렬 및 limit
+        jobs = query.order_by(desc(CrawlJob.created_at)).limit(limit).all()
+
+        # 결과 변환
+        result = []
+        for job in jobs:
+            result.append({
+                "job_id": job.job_id,
+                "job_type": job.job_type,
+                "status": job.status,
+                "complex_id": job.complex_id,
+                "complex_name": job.complex_name,
+                "started_at": job.started_at.isoformat() if job.started_at else None,
+                "finished_at": job.finished_at.isoformat() if job.finished_at else None,
+                "duration_seconds": job.duration_seconds,
+                "articles_collected": job.articles_collected,
+                "articles_new": job.articles_new,
+                "articles_updated": job.articles_updated,
+                "error_message": job.error_message,
+                "celery_task_id": job.celery_task_id
+            })
+
+        db.close()
+
+        return {
+            "total": len(result),
+            "jobs": result
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"작업 이력 조회 실패: {str(e)}")
+
+
+@router.get("/jobs/{job_id}", response_model=Dict[str, Any])
+def get_job_detail(job_id: str):
+    """
+    특정 작업 상세 조회
+
+    Args:
+        job_id: 작업 ID
+
+    Returns:
+        작업 상세 정보
+    """
+    from app.core.database import SessionLocal
+    from app.models.complex import CrawlJob
+
+    try:
+        db = SessionLocal()
+        job = db.query(CrawlJob).filter(CrawlJob.job_id == job_id).first()
+
+        if not job:
+            raise HTTPException(status_code=404, detail=f"작업 ID '{job_id}'를 찾을 수 없습니다.")
+
+        result = {
+            "job_id": job.job_id,
+            "job_type": job.job_type,
+            "status": job.status,
+            "complex_id": job.complex_id,
+            "complex_name": job.complex_name,
+            "started_at": job.started_at.isoformat() if job.started_at else None,
+            "finished_at": job.finished_at.isoformat() if job.finished_at else None,
+            "duration_seconds": job.duration_seconds,
+            "articles_collected": job.articles_collected,
+            "articles_new": job.articles_new,
+            "articles_updated": job.articles_updated,
+            "articles_removed": job.articles_removed,
+            "error_message": job.error_message,
+            "error_traceback": job.error_traceback,
+            "celery_task_id": job.celery_task_id,
+            "created_at": job.created_at.isoformat() if job.created_at else None
+        }
+
+        db.close()
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"작업 조회 실패: {str(e)}")
+
+
+@router.get("/stats", response_model=Dict[str, Any])
+def get_crawl_stats():
+    """
+    크롤링 통계 조회
+
+    Returns:
+        전체 통계 (성공률, 평균 시간 등)
+    """
+    from app.core.database import SessionLocal
+    from app.models.complex import CrawlJob
+    from sqlalchemy import func
+    from datetime import datetime, timedelta
+
+    try:
+        db = SessionLocal()
+
+        # 전체 작업 수
+        total_jobs = db.query(func.count(CrawlJob.id)).scalar()
+
+        # 상태별 통계
+        success_count = db.query(func.count(CrawlJob.id)).filter(CrawlJob.status == 'success').scalar()
+        failed_count = db.query(func.count(CrawlJob.id)).filter(CrawlJob.status == 'failed').scalar()
+        running_count = db.query(func.count(CrawlJob.id)).filter(CrawlJob.status == 'running').scalar()
+
+        # 성공률
+        success_rate = (success_count / total_jobs * 100) if total_jobs > 0 else 0
+
+        # 평균 소요 시간 (성공한 작업만)
+        avg_duration = db.query(func.avg(CrawlJob.duration_seconds)).filter(
+            CrawlJob.status == 'success',
+            CrawlJob.duration_seconds.isnot(None)
+        ).scalar()
+
+        # 최근 24시간 통계
+        since_24h = datetime.now() - timedelta(hours=24)
+        recent_jobs = db.query(func.count(CrawlJob.id)).filter(
+            CrawlJob.created_at >= since_24h
+        ).scalar()
+
+        recent_success = db.query(func.count(CrawlJob.id)).filter(
+            CrawlJob.created_at >= since_24h,
+            CrawlJob.status == 'success'
+        ).scalar()
+
+        # 최근 성공/실패 작업
+        latest_success = db.query(CrawlJob).filter(
+            CrawlJob.status == 'success'
+        ).order_by(CrawlJob.finished_at.desc()).first()
+
+        latest_failure = db.query(CrawlJob).filter(
+            CrawlJob.status == 'failed'
+        ).order_by(CrawlJob.finished_at.desc()).first()
+
+        db.close()
+
+        return {
+            "total_jobs": total_jobs,
+            "success_count": success_count,
+            "failed_count": failed_count,
+            "running_count": running_count,
+            "success_rate": round(success_rate, 2),
+            "avg_duration_seconds": int(avg_duration) if avg_duration else None,
+            "recent_24h": {
+                "total": recent_jobs,
+                "success": recent_success,
+                "failed": recent_jobs - recent_success
+            },
+            "latest_success": {
+                "job_id": latest_success.job_id,
+                "complex_name": latest_success.complex_name,
+                "finished_at": latest_success.finished_at.isoformat() if latest_success.finished_at else None
+            } if latest_success else None,
+            "latest_failure": {
+                "job_id": latest_failure.job_id,
+                "complex_name": latest_failure.complex_name,
+                "finished_at": latest_failure.finished_at.isoformat() if latest_failure.finished_at else None,
+                "error_message": latest_failure.error_message
+            } if latest_failure else None
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"통계 조회 실패: {str(e)}")
+
+
+@router.get("/jobs/running/current", response_model=Dict[str, Any])
+def get_running_jobs():
+    """
+    현재 실행 중인 작업 조회
+
+    Returns:
+        실행 중인 작업 목록
+    """
+    from app.core.database import SessionLocal
+    from app.models.complex import CrawlJob
+
+    try:
+        db = SessionLocal()
+
+        running_jobs = db.query(CrawlJob).filter(
+            CrawlJob.status == 'running'
+        ).all()
+
+        result = []
+        for job in running_jobs:
+            # 경과 시간 계산
+            elapsed_seconds = None
+            if job.started_at:
+                # started_at이 timezone-aware면 now도 같은 timezone으로
+                from datetime import timezone
+                job_now = datetime.now(timezone.utc) if job.started_at.tzinfo else datetime.now()
+                elapsed_seconds = int((job_now - job.started_at).total_seconds())
+
+            result.append({
+                "job_id": job.job_id,
+                "job_type": job.job_type,
+                "complex_id": job.complex_id,
+                "complex_name": job.complex_name,
+                "started_at": job.started_at.isoformat() if job.started_at else None,
+                "elapsed_seconds": elapsed_seconds,
+                "celery_task_id": job.celery_task_id
+            })
+
+        db.close()
+
+        return {
+            "count": len(result),
+            "jobs": result
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"실행 중인 작업 조회 실패: {str(e)}")
+
+
+@router.delete("/jobs/{job_id}", response_model=Dict[str, Any])
+def delete_job(job_id: str, db: Session = Depends(get_db)):
+    """
+    작업 이력 삭제
+
+    Args:
+        job_id: 삭제할 작업 ID
+
+    Returns:
+        삭제 결과
+    """
+    try:
+        # 작업 조회
+        job = db.query(CrawlJob).filter(CrawlJob.job_id == job_id).first()
+
+        if not job:
+            raise HTTPException(
+                status_code=404,
+                detail=f"작업 ID '{job_id}'를 찾을 수 없습니다."
+            )
+
+        # 작업 삭제
+        db.delete(job)
+        db.commit()
+
+        return {
+            "message": f"작업 '{job.complex_name or job_id}'이(가) 삭제되었습니다.",
+            "job_id": job_id
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"작업 삭제 실패: {str(e)}")
+
+
+@router.get("/jobs/{job_id}/detail", response_model=Dict[str, Any])
+def get_job_detail(job_id: str, db: Session = Depends(get_db)):
+    """
+    작업 상세 정보 조회 (스냅샷 및 변경사항 포함)
+
+    Args:
+        job_id: 작업 ID
+
+    Returns:
+        작업 상세 정보, 스냅샷, 변경사항
+    """
+    from app.models.complex import ArticleSnapshot, ArticleChange
+    from sqlalchemy import and_
+
+    try:
+        # 작업 조회
+        job = db.query(CrawlJob).filter(CrawlJob.job_id == job_id).first()
+
+        if not job:
+            raise HTTPException(
+                status_code=404,
+                detail=f"작업 ID '{job_id}'를 찾을 수 없습니다."
+            )
+
+        # 작업 기본 정보
+        job_data = {
+            "job_id": job.job_id,
+            "job_type": job.job_type,
+            "status": job.status,
+            "complex_id": job.complex_id,
+            "complex_name": job.complex_name,
+            "started_at": job.started_at.isoformat() if job.started_at else None,
+            "finished_at": job.finished_at.isoformat() if job.finished_at else None,
+            "duration_seconds": job.duration_seconds,
+            "articles_collected": job.articles_collected,
+            "articles_new": job.articles_new,
+            "articles_updated": job.articles_updated,
+            "error_message": job.error_message,
+            "error_traceback": job.error_traceback,
+            "celery_task_id": job.celery_task_id,
+            "created_at": job.created_at.isoformat() if job.created_at else None
+        }
+
+        # 해당 작업 시간대의 스냅샷 조회 (작업 시작~종료 시간 사이)
+        snapshots = []
+        changes = []
+
+        if job.complex_id and job.started_at:
+            # 스냅샷 조회
+            snapshot_query = db.query(ArticleSnapshot).filter(
+                ArticleSnapshot.complex_id == job.complex_id
+            )
+
+            if job.finished_at:
+                snapshot_query = snapshot_query.filter(
+                    and_(
+                        ArticleSnapshot.snapshot_date >= job.started_at,
+                        ArticleSnapshot.snapshot_date <= job.finished_at
+                    )
+                )
+            else:
+                snapshot_query = snapshot_query.filter(
+                    ArticleSnapshot.snapshot_date >= job.started_at
+                )
+
+            snapshot_records = snapshot_query.order_by(ArticleSnapshot.snapshot_date.desc()).limit(100).all()
+
+            for snapshot in snapshot_records:
+                snapshots.append({
+                    "snapshot_id": snapshot.id,
+                    "article_no": snapshot.article_no,
+                    "article_name": snapshot.area_name or f"{snapshot.building_name} {snapshot.floor_info}",
+                    "trade_type": snapshot.trade_type,
+                    "price": snapshot.price,
+                    "area": snapshot.area1,
+                    "floor": snapshot.floor_info,
+                    "direction": snapshot.direction,
+                    "is_active": True,  # 스냅샷은 기본적으로 활성
+                    "captured_at": snapshot.snapshot_date.isoformat() if snapshot.snapshot_date else None
+                })
+
+            # 변경사항 조회
+            change_query = db.query(ArticleChange).filter(
+                ArticleChange.complex_id == job.complex_id
+            )
+
+            if job.finished_at:
+                change_query = change_query.filter(
+                    and_(
+                        ArticleChange.detected_at >= job.started_at,
+                        ArticleChange.detected_at <= job.finished_at
+                    )
+                )
+            else:
+                change_query = change_query.filter(
+                    ArticleChange.detected_at >= job.started_at
+                )
+
+            change_records = change_query.order_by(ArticleChange.detected_at.desc()).limit(100).all()
+
+            for change in change_records:
+                changes.append({
+                    "change_id": change.change_id,
+                    "article_no": change.article_no,
+                    "change_type": change.change_type,
+                    "article_name": change.article_name,
+                    "trade_type": change.trade_type,
+                    "old_price": change.old_price,
+                    "new_price": change.new_price,
+                    "price_diff": change.price_diff,
+                    "detected_at": change.detected_at.isoformat() if change.detected_at else None
+                })
+
+        return {
+            "job": job_data,
+            "snapshots": {
+                "count": len(snapshots),
+                "data": snapshots
+            },
+            "changes": {
+                "count": len(changes),
+                "data": changes
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"작업 상세 조회 실패: {str(e)}")

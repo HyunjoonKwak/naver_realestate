@@ -1,6 +1,7 @@
 """
 주간 브리핑 생성 및 발송 서비스
 """
+import os
 import logging
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
@@ -20,7 +21,13 @@ class BriefingService:
     def __init__(self, db: Session):
         self.db = db
         self.tracker = ArticleTracker(db)
-        self.notification_manager = NotificationManager()
+        # 환경변수에서 Webhook URL 읽기
+        slack_webhook = os.getenv('SLACK_WEBHOOK_URL')
+        discord_webhook = os.getenv('DISCORD_WEBHOOK_URL')
+        self.notification_manager = NotificationManager(
+            slack_webhook=slack_webhook,
+            discord_webhook=discord_webhook
+        )
 
     def generate_weekly_briefing(
         self,

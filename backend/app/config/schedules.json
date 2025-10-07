@@ -1,0 +1,42 @@
+{
+  "crawl-all-complexes-morning": {
+    "task": "app.tasks.scheduler.crawl_all_complexes",
+    "schedule": {
+      "hour": 6,
+      "minute": 0,
+      "day_of_week": "*"
+    },
+    "enabled": true,
+    "description": "매일 오전 6시 전체 단지 크롤링"
+  },
+  "crawl-all-complexes-evening": {
+    "task": "app.tasks.scheduler.crawl_all_complexes",
+    "schedule": {
+      "hour": 18,
+      "minute": 0,
+      "day_of_week": "*"
+    },
+    "enabled": true,
+    "description": "매일 오후 6시 전체 단지 크롤링"
+  },
+  "cleanup-old-snapshots": {
+    "task": "app.tasks.scheduler.cleanup_old_snapshots",
+    "schedule": {
+      "hour": 2,
+      "minute": 0,
+      "day_of_week": "1"
+    },
+    "enabled": true,
+    "description": "매주 월요일 오전 2시 오래된 스냅샷 정리 (90일 이전)"
+  },
+  "send-weekly-briefing": {
+    "task": "app.tasks.briefing_tasks.send_weekly_briefing",
+    "schedule": {
+      "hour": 9,
+      "minute": 0,
+      "day_of_week": "1"
+    },
+    "enabled": true,
+    "description": "매주 월요일 오전 9시 주간 브리핑 발송"
+  }
+}
