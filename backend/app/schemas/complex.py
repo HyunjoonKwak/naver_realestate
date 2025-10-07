@@ -43,6 +43,7 @@ class ArticleBase(BaseModel):
     complex_id: str
     trade_type: Optional[str] = None
     price: Optional[str] = None
+    monthly_rent: Optional[str] = None
     price_change_state: Optional[str] = None
     area_name: Optional[str] = None
     area1: Optional[float] = None

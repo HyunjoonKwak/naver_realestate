@@ -30,9 +30,6 @@ export default function RootLayout({
                   <a href="/complexes" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
                     단지 목록
                   </a>
-                  <a href="/articles" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
-                    매물 검색
-                  </a>
                   <a href="/transactions" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
                     실거래가
                   </a>

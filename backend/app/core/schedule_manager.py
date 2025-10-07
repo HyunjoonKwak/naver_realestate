@@ -39,11 +39,43 @@ def load_schedules_from_file() -> Dict[str, Any]:
 
             # crontab 객체 생성
             if day_of_week == '*':
+                # 매일
                 schedule_obj = crontab(
                     hour=schedule_config['hour'],
                     minute=schedule_config['minute']
                 )
+            elif day_of_week == 'QUARTERLY_1':
+                # 분기별 1일 (1월, 4월, 7월, 10월 1일)
+                schedule_obj = crontab(
+                    hour=schedule_config['hour'],
+                    minute=schedule_config['minute'],
+                    day_of_month='1',
+                    month_of_year='1,4,7,10'
+                )
+            elif day_of_week == 'QUARTERLY_15':
+                # 분기별 15일 (1월, 4월, 7월, 10월 15일)
+                schedule_obj = crontab(
+                    hour=schedule_config['hour'],
+                    minute=schedule_config['minute'],
+                    day_of_month='15',
+                    month_of_year='1,4,7,10'
+                )
+            elif day_of_week == 'MONTHLY_1':
+                # 매월 1일
+                schedule_obj = crontab(
+                    hour=schedule_config['hour'],
+                    minute=schedule_config['minute'],
+                    day_of_month='1'
+                )
+            elif day_of_week == 'MONTHLY_15':
+                # 매월 15일
+                schedule_obj = crontab(
+                    hour=schedule_config['hour'],
+                    minute=schedule_config['minute'],
+                    day_of_month='15'
+                )
             else:
+                # 매주 특정 요일
                 schedule_obj = crontab(
                     hour=schedule_config['hour'],
                     minute=schedule_config['minute'],

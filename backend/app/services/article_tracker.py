@@ -159,6 +159,11 @@ class ArticleTracker:
 
                 if prev_price_num and curr_price_num:
                     price_diff = curr_price_num - prev_price_num
+
+                    # 실제 가격 차이가 없으면 스킵 (문자열만 다른 경우)
+                    if price_diff == 0:
+                        continue
+
                     price_change_percent = (price_diff / prev_price_num) * 100
 
                     change_type = 'PRICE_UP' if price_diff > 0 else 'PRICE_DOWN'

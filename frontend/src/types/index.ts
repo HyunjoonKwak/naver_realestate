@@ -27,6 +27,7 @@ export interface Article {
   complex_id: string;
   trade_type?: string;
   price?: string;
+  monthly_rent?: string;
   price_change_state?: string;
   area_name?: string;
   area1?: number;

@@ -873,7 +873,7 @@ export default function SchedulerPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      반복 요일
+                      반복 주기
                     </label>
                     <select
                       value={formData.day_of_week}
@@ -881,13 +881,17 @@ export default function SchedulerPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="*">매일</option>
-                      <option value="0">월요일</option>
-                      <option value="1">화요일</option>
-                      <option value="2">수요일</option>
-                      <option value="3">목요일</option>
-                      <option value="4">금요일</option>
-                      <option value="5">토요일</option>
-                      <option value="6">일요일</option>
+                      <option value="0">매주 월요일</option>
+                      <option value="1">매주 화요일</option>
+                      <option value="2">매주 수요일</option>
+                      <option value="3">매주 목요일</option>
+                      <option value="4">매주 금요일</option>
+                      <option value="5">매주 토요일</option>
+                      <option value="6">매주 일요일</option>
+                      <option value="QUARTERLY_1">분기별 (1월, 4월, 7월, 10월 1일)</option>
+                      <option value="QUARTERLY_15">분기별 (1월, 4월, 7월, 10월 15일)</option>
+                      <option value="MONTHLY_1">매월 1일</option>
+                      <option value="MONTHLY_15">매월 15일</option>
                     </select>
                   </div>
 
@@ -997,7 +1001,7 @@ export default function SchedulerPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      반복 요일
+                      반복 주기
                     </label>
                     <select
                       value={editFormData.day_of_week}
@@ -1005,13 +1009,17 @@ export default function SchedulerPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="*">매일</option>
-                      <option value="0">월요일</option>
-                      <option value="1">화요일</option>
-                      <option value="2">수요일</option>
-                      <option value="3">목요일</option>
-                      <option value="4">금요일</option>
-                      <option value="5">토요일</option>
-                      <option value="6">일요일</option>
+                      <option value="0">매주 월요일</option>
+                      <option value="1">매주 화요일</option>
+                      <option value="2">매주 수요일</option>
+                      <option value="3">매주 목요일</option>
+                      <option value="4">매주 금요일</option>
+                      <option value="5">매주 토요일</option>
+                      <option value="6">매주 일요일</option>
+                      <option value="QUARTERLY_1">분기별 (1월, 4월, 7월, 10월 1일)</option>
+                      <option value="QUARTERLY_15">분기별 (1월, 4월, 7월, 10월 15일)</option>
+                      <option value="MONTHLY_1">매월 1일</option>
+                      <option value="MONTHLY_15">매월 15일</option>
                     </select>
                   </div>
                 </div>

@@ -171,10 +171,71 @@ def get_complex_stats(
     # Note: Article prices are stored as strings (e.g. "3억 5,000") so we cannot calculate min/max
     # Price range information comes from Complex table fields
 
+    # 월세 가격 범위 계산 (보증금 및 월세)
+    monthly_articles = db.query(Article.price, Article.monthly_rent).filter(
+        Article.complex_id == complex_id,
+        Article.is_active == True,
+        Article.trade_type == "월세",
+        Article.price.isnot(None)
+    ).all()
+
+    monthly_deposit_min = None
+    monthly_deposit_max = None
+    monthly_rent_min = None
+    monthly_rent_max = None
+
+    if monthly_articles:
+        # price 문자열에서 숫자 추출하여 비교
+        def extract_price_number(price_str):
+            if not price_str:
+                return 0
+            import re
+            # "12억", "5,000" 등에서 숫자 추출
+            price_str = price_str.replace(',', '')
+            if '억' in price_str:
+                parts = price_str.split('억')
+                eok = int(re.sub(r'\D', '', parts[0])) if parts[0].strip() else 0
+                man = int(re.sub(r'\D', '', parts[1])) if len(parts) > 1 and parts[1].strip() else 0
+                return eok * 10000 + man
+            else:
+                return int(re.sub(r'\D', '', price_str)) if re.sub(r'\D', '', price_str) else 0
+
+        # 보증금 범위
+        price_numbers = [(p[0], extract_price_number(p[0])) for p in monthly_articles if p[0]]
+        if price_numbers:
+            price_numbers.sort(key=lambda x: x[1])
+            monthly_deposit_min = price_numbers[0][0]
+            monthly_deposit_max = price_numbers[-1][0]
+
+        # 월세 범위
+        rent_numbers = [(p[1], extract_price_number(p[1])) for p in monthly_articles if p[1]]
+        if rent_numbers:
+            rent_numbers.sort(key=lambda x: x[1])
+            monthly_rent_min = rent_numbers[0][0]
+            monthly_rent_max = rent_numbers[-1][0]
+
+    # 24시간 변경사항 계산
+    from datetime import datetime, timezone, timedelta
+    from app.models.complex import ArticleChange
+
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+    changes_24h = db.query(ArticleChange).filter(
+        ArticleChange.complex_id == complex_id,
+        ArticleChange.detected_at >= cutoff
+    ).all()
+
+    changes_summary = {
+        "new": sum(1 for c in changes_24h if c.change_type == 'NEW'),
+        "removed": sum(1 for c in changes_24h if c.change_type == 'REMOVED'),
+        "price_up": sum(1 for c in changes_24h if c.change_type == 'PRICE_UP'),
+        "price_down": sum(1 for c in changes_24h if c.change_type == 'PRICE_DOWN')
+    }
+
     return {
         "complex_id": complex_id,
         "complex_name": complex_obj.complex_name,
         "total_households": complex_obj.total_households,
+        "address": complex_obj.address,
         "articles": {
             "total": total_articles,
             "sale": sale_count,
@@ -182,19 +243,20 @@ def get_complex_stats(
             "monthly": monthly_count,
         },
         "price_range": {
-            "sale_min": complex_obj.min_price,
-            "sale_max": complex_obj.max_price,
-            "lease_min": complex_obj.min_lease_price,
-            "lease_max": complex_obj.max_lease_price,
-            "monthly_deposit_min": None,  # Not available in complex table
-            "monthly_deposit_max": None,
-            "monthly_rent_min": None,
-            "monthly_rent_max": None,
+            "sale_min": complex_obj.max_price,  # 비싼가격을 앞에
+            "sale_max": complex_obj.min_price,  # 낮은가격을 뒤에
+            "lease_min": complex_obj.max_lease_price,  # 비싼가격을 앞에
+            "lease_max": complex_obj.min_lease_price,  # 낮은가격을 뒤에
+            "monthly_deposit_min": monthly_deposit_max,  # 비싼가격을 앞에
+            "monthly_deposit_max": monthly_deposit_min,  # 낮은가격을 뒤에
+            "monthly_rent_min": monthly_rent_max,  # 비싼가격을 앞에
+            "monthly_rent_max": monthly_rent_min,  # 낮은가격을 뒤에
         },
         "transactions": {
             "total": total_transactions,
             "recent": TransactionResponse.model_validate(recent_transaction) if recent_transaction else None
-        }
+        },
+        "changes_24h": changes_summary
     }
 
 

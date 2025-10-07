@@ -214,10 +214,41 @@ def create_schedule(schedule: ScheduleCreate):
                 detail=f"'{schedule.name}' 스케줄이 이미 존재합니다."
             )
 
-        # Crontab 생성
+        # Crontab 생성 (특수 스케줄 처리)
         if schedule.day_of_week == "*":
             schedule_obj = crontab(hour=schedule.hour, minute=schedule.minute)
+        elif schedule.day_of_week == 'QUARTERLY_1':
+            # 분기별 1일 (1월, 4월, 7월, 10월 1일)
+            schedule_obj = crontab(
+                hour=schedule.hour,
+                minute=schedule.minute,
+                day_of_month='1',
+                month_of_year='1,4,7,10'
+            )
+        elif schedule.day_of_week == 'QUARTERLY_15':
+            # 분기별 15일 (1월, 4월, 7월, 10월 15일)
+            schedule_obj = crontab(
+                hour=schedule.hour,
+                minute=schedule.minute,
+                day_of_month='15',
+                month_of_year='1,4,7,10'
+            )
+        elif schedule.day_of_week == 'MONTHLY_1':
+            # 매월 1일
+            schedule_obj = crontab(
+                hour=schedule.hour,
+                minute=schedule.minute,
+                day_of_month='1'
+            )
+        elif schedule.day_of_week == 'MONTHLY_15':
+            # 매월 15일
+            schedule_obj = crontab(
+                hour=schedule.hour,
+                minute=schedule.minute,
+                day_of_month='15'
+            )
         else:
+            # 일반 요일 (0-6)
             schedule_obj = crontab(
                 hour=schedule.hour,
                 minute=schedule.minute,

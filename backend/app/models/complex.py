@@ -58,7 +58,8 @@ class Article(Base):
 
     # 거래 정보
     trade_type = Column(String(20), comment="거래 유형 (매매/전세/월세)")
-    price = Column(String(100), comment="가격 (문자열)")
+    price = Column(String(100), comment="가격 (문자열) - 매매/전세는 가격, 월세는 보증금")
+    monthly_rent = Column(String(50), comment="월세 금액 (월세 거래 시)")
     price_change_state = Column(String(20), comment="가격 변동 상태 (SAME/UP/DOWN)")
 
     # 면적 정보

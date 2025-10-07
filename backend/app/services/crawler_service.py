@@ -19,7 +19,6 @@ class NaverRealEstateCrawler:
         self.api_responses = []
         self.complex_data = None
         self.articles_data = None
-        self.transactions_data = []
 
     async def save_response(self, response):
         """API 응답 저장"""
@@ -89,11 +88,6 @@ class NaverRealEstateCrawler:
                                 else:
                                     print(f"✅ 추가 매물 수집: +{current_count}건 (누적: {total}건 / 전체: {total_count}건)")
 
-                # 실거래가 (realPrice 포함)
-                if 'realPrice' in str(data):
-                    self.transactions_data.append(data)
-                    print(f"✅ 실거래가 정보 수집")
-
         except Exception as e:
             # JSON 파싱 실패는 무시
             pass
@@ -122,7 +116,6 @@ class NaverRealEstateCrawler:
         self.api_responses = []
         self.complex_data = None
         self.articles_data = None
-        self.transactions_data = []
 
         async with async_playwright() as p:
             # ⚠️ 봇 감지 회피: headless=False, AutomationControlled 비활성화
@@ -506,8 +499,7 @@ class NaverRealEstateCrawler:
 
         return {
             'complex': self.complex_data,
-            'articles': self.articles_data,
-            'transactions': self.transactions_data
+            'articles': self.articles_data
         }
 
     def save_to_database(self, complex_id: str, db: Session = None):
@@ -637,11 +629,22 @@ class NaverRealEstateCrawler:
                         Article.article_no == article_no
                     ).first()
 
+                    # 월세 가격 파싱 (보증금/월세 분리)
+                    trade_type = article.get('tradeTypeName')
+                    price_str = article.get('dealOrWarrantPrc')
+                    monthly_rent = None
+
+                    if trade_type == '월세' and price_str and '/' in price_str:
+                        # "5,000/140" 형식에서 보증금과 월세 분리
+                        parts = price_str.split('/')
+                        price_str = parts[0].strip()
+                        monthly_rent = parts[1].strip() if len(parts) > 1 else None
+
                     if existing:
                         # 가격 변동 확인
-                        new_price = article.get('dealOrWarrantPrc')
-                        if existing.price != new_price:
-                            existing.price = new_price
+                        if existing.price != price_str or (monthly_rent and existing.monthly_rent != monthly_rent):
+                            existing.price = price_str
+                            existing.monthly_rent = monthly_rent
                             existing.price_change_state = article.get('priceChangeState')
                             updated_count += 1
                         else:
@@ -651,8 +654,9 @@ class NaverRealEstateCrawler:
                     article_obj = Article(
                         article_no=article_no,
                         complex_id=complex_id,
-                        trade_type=article.get('tradeTypeName'),
-                        price=article.get('dealOrWarrantPrc'),
+                        trade_type=trade_type,
+                        price=price_str,
+                        monthly_rent=monthly_rent,
                         area_name=article.get('areaName'),
                         area1=article.get('area1'),
                         area2=article.get('area2'),
@@ -678,68 +682,16 @@ class NaverRealEstateCrawler:
                     print(f"   🔄 가격변동: {updated_count}건")
                 print(f"   ⏭️  변동없음: {skipped_count}건")
 
-            # 3. 실거래가 저장
-            if self.transactions_data:
-                print("\n📊 실거래가 저장 중...")
-
-                saved_count = 0
-                skipped_count = 0
-
-                for trans_data in self.transactions_data:
-                    real_price = trans_data.get('realPrice')
-                    if not real_price:
-                        continue
-
-                    # 거래일자 생성
-                    trade_date = None
-                    if all(k in real_price for k in ['tradeYear', 'tradeMonth', 'tradeDate']):
-                        try:
-                            trade_date = f"{real_price['tradeYear']}{str(real_price['tradeMonth']).zfill(2)}{str(real_price['tradeDate']).zfill(2)}"
-                        except:
-                            pass
-
-                    # 중복 확인
-                    existing = db.query(Transaction).filter(
-                        Transaction.complex_id == complex_id,
-                        Transaction.trade_date == trade_date,
-                        Transaction.deal_price == real_price.get('dealPrice'),
-                        Transaction.floor == real_price.get('floor')
-                    ).first()
-
-                    if existing:
-                        skipped_count += 1
-                        continue
-
-                    transaction_obj = Transaction(
-                        complex_id=complex_id,
-                        trade_type=real_price.get('tradeType', 'A1'),
-                        trade_date=trade_date,
-                        deal_price=real_price.get('dealPrice'),
-                        floor=real_price.get('floor'),
-                        area=real_price.get('representativeArea'),
-                        exclusive_area=real_price.get('exclusiveArea'),
-                        formatted_price=real_price.get('formattedPrice')
-                    )
-                    db.add(transaction_obj)
-                    saved_count += 1
-
-                db.commit()
-
-                print(f"   ✅ 새 실거래: {saved_count}건")
-                print(f"   ⏭️  기존거래: {skipped_count}건")
-
-            # 4. 최종 통계
+            # 3. 최종 통계
             print(f"\n{'='*80}")
             print(f"📊 데이터베이스 현황")
             print(f"{'='*80}")
 
             total_complexes = db.query(Complex).count()
             total_articles = db.query(Article).count()
-            total_transactions = db.query(Transaction).count()
 
             print(f"\n단지: {total_complexes}개")
             print(f"매물: {total_articles}건")
-            print(f"실거래: {total_transactions}건")
 
             print("\n✅ 저장 완료!\n")
 

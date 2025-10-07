@@ -316,18 +316,28 @@ export default function Home() {
                       {/* 월세 가격 */}
                       <div className="bg-yellow-50 rounded-lg p-4">
                         <div className="text-xs text-yellow-600 font-medium mb-1">월세</div>
-                        <div className="text-sm font-bold text-yellow-900">
-                          {stats.price_range?.monthly_deposit_min || stats.price_range?.monthly_rent_min ? (
-                            <>
-                              <div>보증금 {formatPrice(stats.price_range?.monthly_deposit_min || null)}</div>
-                              <div className="text-xs text-yellow-600 mt-0.5">
-                                월세 {formatPrice(stats.price_range?.monthly_rent_min || null)}
+                        {stats.price_range?.monthly_deposit_min || stats.price_range?.monthly_rent_min ? (
+                          <div>
+                            <div className="text-sm font-bold text-yellow-900">
+                              보증금 {formatPrice(stats.price_range?.monthly_deposit_min)}
+                            </div>
+                            <div className="text-xs text-yellow-600 mt-0.5">
+                              ~ {formatPrice(stats.price_range?.monthly_deposit_max)}
+                            </div>
+                            {stats.price_range?.monthly_rent_min && (
+                              <div className="text-sm font-bold text-yellow-900 mt-2">
+                                월세 {formatPrice(stats.price_range?.monthly_rent_min)}
                               </div>
-                            </>
-                          ) : (
-                            <div>-</div>
-                          )}
-                        </div>
+                            )}
+                            {stats.price_range?.monthly_rent_max && (
+                              <div className="text-xs text-yellow-600 mt-0.5">
+                                ~ {formatPrice(stats.price_range?.monthly_rent_max)}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-lg font-bold text-yellow-900">-</div>
+                        )}
                       </div>
                     </div>
 

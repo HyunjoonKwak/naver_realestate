@@ -886,7 +886,13 @@ export default function ComplexDetailPage() {
                         {article.trade_type}
                       </span>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">{article.price}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">
+                      {article.trade_type === '월세' && article.monthly_rent ? (
+                        <span>{article.price}/{article.monthly_rent}</span>
+                      ) : (
+                        <span>{article.price}</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{article.area1}㎡</td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{article.area_name}</td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{article.building_name}</td>

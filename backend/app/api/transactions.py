@@ -14,6 +14,59 @@ from app.services.transaction_service import TransactionService
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
 
+@router.get("/stats/overview")
+def get_overview_stats(db: Session = Depends(get_db)):
+    """
+    전체 실거래가 통계 개요
+
+    모든 단지의 실거래가 통계를 요약합니다.
+    """
+    # 전체 거래 건수
+    total_count = db.query(func.count(Transaction.id)).scalar() or 0
+
+    # 단지별 거래 건수
+    complex_stats = db.query(
+        Complex.complex_id,
+        Complex.complex_name,
+        func.count(Transaction.id).label('transaction_count'),
+        func.max(Transaction.trade_date).label('latest_date'),
+        func.avg(Transaction.deal_price).label('avg_price'),
+        func.min(Transaction.deal_price).label('min_price'),
+        func.max(Transaction.deal_price).label('max_price')
+    ).join(
+        Transaction, Complex.complex_id == Transaction.complex_id
+    ).group_by(
+        Complex.complex_id, Complex.complex_name
+    ).all()
+
+    complex_list = [
+        {
+            "complex_id": stat.complex_id,
+            "complex_name": stat.complex_name,
+            "transaction_count": stat.transaction_count,
+            "latest_date": stat.latest_date,
+            "avg_price": int(stat.avg_price) if stat.avg_price else 0,
+            "min_price": stat.min_price,
+            "max_price": stat.max_price
+        }
+        for stat in complex_stats
+    ]
+
+    # 최근 거래 (최근 7일)
+    from datetime import datetime, timedelta
+    seven_days_ago = (datetime.now() - timedelta(days=7)).strftime('%Y%m%d')
+    recent_count = db.query(func.count(Transaction.id)).filter(
+        Transaction.trade_date >= seven_days_ago
+    ).scalar() or 0
+
+    return {
+        "total_transactions": total_count,
+        "recent_7days": recent_count,
+        "complex_count": len(complex_list),
+        "complexes": complex_list
+    }
+
+
 @router.get("/", response_model=List[TransactionResponse])
 def search_transactions(
     complex_id: Optional[str] = Query(None, description="단지 ID"),
@@ -270,6 +323,54 @@ def fetch_transactions_from_molit(
         raise HTTPException(status_code=400, detail=result["message"])
 
     return result
+
+
+@router.post("/fetch-all")
+def fetch_all_transactions_from_molit(
+    months: int = Query(6, ge=1, le=24, description="조회 기간 (개월)"),
+    db: Session = Depends(get_db)
+):
+    """
+    모든 단지의 실거래가를 국토부 API에서 조회하여 DB에 저장
+
+    - **months**: 조회 기간 (1~24개월)
+    """
+    # 모든 단지 조회
+    complexes = db.query(Complex).all()
+
+    if not complexes:
+        return {
+            "success": False,
+            "message": "등록된 단지가 없습니다"
+        }
+
+    service = TransactionService(db)
+    results = []
+    success_count = 0
+    fail_count = 0
+
+    for complex_obj in complexes:
+        result = service.fetch_and_save_transactions(complex_obj.complex_id, months)
+        results.append({
+            "complex_id": complex_obj.complex_id,
+            "complex_name": complex_obj.complex_name,
+            "success": result["success"],
+            "new_count": result.get("new_count", 0),
+            "message": result.get("message", "")
+        })
+
+        if result["success"]:
+            success_count += 1
+        else:
+            fail_count += 1
+
+    return {
+        "success": True,
+        "total_complexes": len(complexes),
+        "success_count": success_count,
+        "fail_count": fail_count,
+        "results": results
+    }
 
 
 @router.get("/stats/area-summary/{complex_id}")
