@@ -28,7 +28,8 @@
       "Bash(find:*)",
       "Bash(pkill:*)",
       "Read(//private/tmp/**)",
-      "Bash(source:*)"
+      "Bash(source:*)",
+      "Bash(backend/.venv/bin/python3 migrate_db.py:*)"
     ],
     "deny": [],
     "ask": []

@@ -163,8 +163,8 @@ async def crawl_complex(request: CrawlRequest, background_tasks: BackgroundTasks
     if not complex:
         raise HTTPException(status_code=404, detail="단지를 찾을 수 없습니다")
 
-    # 백그라운드에서 크롤링 실행 (db 세션은 전달하지 않음 - save_to_database가 자체 세션 생성)
-    background_tasks.add_task(run_crawler, request.complex_id)
+    # 백그라운드에서 크롤링 실행 (변동 추적 활성화)
+    background_tasks.add_task(run_crawler, request.complex_id, True)
 
     return {
         "message": "크롤링이 시작되었습니다",
@@ -173,26 +173,44 @@ async def crawl_complex(request: CrawlRequest, background_tasks: BackgroundTasks
     }
 
 
-async def run_crawler(complex_id: str, create_snapshot: bool = False):
-    """실제 크롤링 실행 (advanced_crawler.py 로직 이용)"""
-    import sys
-    import os
+@router.post("/crawl/{complex_id}")
+async def crawl_complex_by_id(complex_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """
+    단지의 매물 정보 크롤링 (RESTful 경로 파라미터 버전)
+
+    - **complex_id**: 크롤링할 단지 ID
+    """
+    # 단지가 존재하는지 확인
+    complex = db.query(Complex).filter(Complex.complex_id == complex_id).first()
+    if not complex:
+        raise HTTPException(status_code=404, detail="단지를 찾을 수 없습니다")
+
+    # 백그라운드에서 크롤링 실행 (변동 추적 활성화)
+    background_tasks.add_task(run_crawler, complex_id, True)
+
+    return {
+        "message": "크롤링이 시작되었습니다",
+        "complex_id": complex_id,
+        "complex_name": complex.complex_name
+    }
+
+
+async def run_crawler(complex_id: str, create_snapshot: bool = True):
+    """
+    실제 크롤링 실행 (crawler_service 사용)
+
+    Args:
+        complex_id: 단지 ID
+        create_snapshot: 스냅샷 생성 및 변동 감지 여부 (기본값 True)
+    """
     import traceback
     from ..core.database import SessionLocal
+    from ..services.crawler_service import NaverRealEstateCrawler
 
     print(f"   [SCRAPER] Starting run_crawler for complex {complex_id}")
-
-    # advanced_crawler.py를 임포트하기 위해 경로 추가
-    backend_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    project_root = os.path.dirname(backend_path)
-    sys.path.insert(0, project_root)
-
-    print(f"   [SCRAPER] Project root: {project_root}")
+    print(f"   [SCRAPER] Snapshot tracking: {'Enabled' if create_snapshot else 'Disabled'}")
 
     try:
-        print(f"   [SCRAPER] Importing NaverRealEstateCrawler...")
-        from advanced_crawler import NaverRealEstateCrawler
-
         print(f"   [SCRAPER] Creating crawler instance...")
         crawler = NaverRealEstateCrawler()
 

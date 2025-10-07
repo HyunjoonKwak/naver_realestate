@@ -1,9 +1,10 @@
 """
 단지 관련 데이터베이스 모델
 """
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, Text, BigInteger
+from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, Text, BigInteger, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 
 Base = declarative_base()
 
@@ -51,7 +52,7 @@ class Article(Base):
 
     id = Column(BigInteger, primary_key=True, index=True)
     article_no = Column(String(50), unique=True, index=True, nullable=False, comment="매물 번호")
-    complex_id = Column(String(50), index=True, nullable=False, comment="단지 ID")
+    complex_id = Column(String(50), ForeignKey('complexes.complex_id', ondelete='CASCADE'), index=True, nullable=False, comment="단지 ID")
 
     # 거래 정보
     trade_type = Column(String(20), comment="거래 유형 (매매/전세/월세)")
@@ -98,7 +99,7 @@ class Transaction(Base):
     __tablename__ = "transactions"
 
     id = Column(BigInteger, primary_key=True, index=True)
-    complex_id = Column(String(50), index=True, nullable=False, comment="단지 ID")
+    complex_id = Column(String(50), ForeignKey('complexes.complex_id', ondelete='CASCADE'), index=True, nullable=False, comment="단지 ID")
 
     # 거래 정보
     trade_type = Column(String(20), comment="거래 유형")
@@ -139,7 +140,7 @@ class ArticleSnapshot(Base):
     __tablename__ = "article_snapshots"
 
     id = Column(BigInteger, primary_key=True, index=True)
-    complex_id = Column(String(50), index=True, nullable=False, comment="단지 ID")
+    complex_id = Column(String(50), ForeignKey('complexes.complex_id', ondelete='CASCADE'), index=True, nullable=False, comment="단지 ID")
     article_no = Column(String(50), index=True, nullable=False, comment="매물 번호")
 
     # 매물 정보 (스냅샷 시점)
@@ -168,7 +169,7 @@ class ArticleChange(Base):
     __tablename__ = "article_changes"
 
     id = Column(BigInteger, primary_key=True, index=True)
-    complex_id = Column(String(50), index=True, nullable=False, comment="단지 ID")
+    complex_id = Column(String(50), ForeignKey('complexes.complex_id', ondelete='CASCADE'), index=True, nullable=False, comment="단지 ID")
     article_no = Column(String(50), index=True, comment="매물 번호 (신규/삭제는 null 가능)")
 
     # 변동 유형: NEW, REMOVED, PRICE_UP, PRICE_DOWN
