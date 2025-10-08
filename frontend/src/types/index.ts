@@ -70,13 +70,29 @@ export interface ComplexDetail extends Complex {
 export interface ComplexStats {
   complex_id: string;
   complex_name: string;
+  complex_type?: string;
+  address?: string;
+  total_households?: number;
   articles: {
     total: number;
     sale: number;
     lease: number;
     monthly: number;
   };
-  transactions: {
+  price_range?: {
+    min: number;
+    max: number;
+  };
+  changes_24h?: {
+    new: number;
+    removed: number;
+    price_up: number;
+    price_down: number;
+    total: number;
+  };
+  min_price?: number;
+  max_price?: number;
+  transactions?: {
     total: number;
     recent?: Transaction;
   };
