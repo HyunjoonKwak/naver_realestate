@@ -8,7 +8,7 @@ import os
 # 데이터베이스 URL
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://postgres:postgres@localhost:5432/naver_realestate"
+    "postgresql://postgres:postgres@localhost:5433/naver_realestate"
 )
 
 # Engine 생성
