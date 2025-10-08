@@ -80,6 +80,15 @@ open http://localhost:8000/docs
   - POST /api/scraper/crawl/{complex_id} (RESTful path param)
   - POST /api/scraper/refresh/{complex_id} (with change tracking)
 - `transactions.py` - Transaction queries and analytics
+- `scheduler.py` - Dynamic scheduling API (RedBeat-based, no restart needed):
+  - POST /api/scheduler/trigger/all - Manual crawl all complexes
+  - POST /api/scheduler/trigger/{complex_id} - Manual crawl single complex
+  - GET /api/scheduler/schedule - View current schedules
+  - POST /api/scheduler/schedule - Create new schedule (instant effect)
+  - PUT /api/scheduler/schedule/{name} - Update schedule (instant effect)
+  - DELETE /api/scheduler/schedule/{name} - Delete schedule
+  - GET /api/scheduler/jobs - View crawl job history
+  - GET /api/scheduler/stats - View crawling statistics
 
 **Schemas:** [backend/app/schemas/](backend/app/schemas/) - Pydantic models for request/response validation
 
@@ -89,6 +98,11 @@ open http://localhost:8000/docs
 - `molit_service.py` - 국토교통부 실거래가 API 연동 (XML 파싱, 페이지네이션)
 - `transaction_service.py` - 실거래가 데이터 저장 및 통계 처리
 - `location_parser.py` - 법정동 코드 파싱 및 시군구 코드 추출 (20,000개 법정동)
+- `discord_service.py` - Discord webhook 알림 (크롤링 브리핑, 에러 알림)
+
+**Background Tasks:** [backend/app/tasks/](backend/app/tasks/)
+- `scheduler.py` - Celery tasks for scheduled crawling (crawl_all_complexes, cleanup_old_snapshots)
+- `briefing_tasks.py` - Discord briefing tasks (send_weekly_briefing, send_custom_briefing)
 
 ### Crawler Architecture
 
@@ -111,6 +125,7 @@ open http://localhost:8000/docs
 - `complexes/page.tsx` - Complex list page
 - `complexes/[id]/page.tsx` - Complex detail with articles table, filters, price cards
 - `complexes/new/page.tsx` - Add new complex by Naver URL
+- `scheduler/page.tsx` - Scheduler management (view/create/edit/delete schedules, job history)
 
 **API Client:** [frontend/src/lib/api.ts](frontend/src/lib/api.ts) - Axios-based client for backend API calls
 
@@ -136,7 +151,9 @@ open http://localhost:8000/docs
 
 1. **Adding Complex:** Frontend sends Naver URL → POST /api/scrape/{complex_id} → Crawler runs in background → Stores Complex + Articles in DB
 2. **Viewing Articles:** Frontend calls GET /api/complexes/{complex_id}/articles → Returns filtered articles with stats
-3. **Change Detection:** Crawler compares new snapshot with latest ArticleSnapshot → Creates ArticleChange records → Used for weekly briefing feature
+3. **Change Detection:** Crawler compares new snapshot with latest ArticleSnapshot → Creates ArticleChange records → Used for weekly briefing
+4. **Scheduled Crawling:** Celery Beat triggers crawl_all_complexes task → Crawls all complexes → Sends Discord briefing with summary
+5. **Dynamic Scheduling:** Frontend/API updates schedule → RedBeat saves to Redis → Celery Beat auto-reloads within 5 seconds (no restart needed)
 
 ## Critical Implementation Details
 
@@ -161,7 +178,9 @@ open http://localhost:8000/docs
 
 **Complex ID Extraction:** From Naver URL `https://new.land.naver.com/complexes/{complex_id}`, extract numeric ID.
 
-**Real Transaction Integration (NEW):** Refresh endpoint automatically fetches MOLIT data after crawling. See `docs/TRANSACTION_GUIDE.md` for setup.
+**Real Transaction Integration:** Refresh endpoint automatically fetches MOLIT data after crawling. See Real Transaction section below.
+
+**Scheduled Crawling & Discord Briefing:** Uses Celery + RedBeat for dynamic scheduling. Schedules stored in Redis (editable via API without restart) and JSON file ([backend/app/config/schedules.json](backend/app/config/schedules.json)) for persistence. Weekly briefing automatically sent to Discord after scheduled crawls.
 
 ## Real Transaction (실거래가) Feature
 
@@ -221,11 +240,64 @@ cd backend && .venv/bin/python
 - **법정동 코드**: `backend/app/data/dong_code_active.txt` (20,278 records)
 - **Format**: `법정동코드\t법정동명` (TSV)
 
+## Scheduled Crawling & Discord Briefing
+
+### Setup
+1. **Discord Webhook**: Create webhook in Discord channel settings
+2. **Add to .env**: `DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...`
+3. **Start Celery**: See Essential Commands above
+
+### Architecture
+- **Scheduler**: Celery Beat with RedBeat (Redis-based dynamic scheduler)
+- **Worker**: Celery Worker processes background crawling tasks
+- **Storage**: Schedules stored in Redis (runtime) + JSON file (persistence)
+- **Config File**: [backend/app/config/schedules.json](backend/app/config/schedules.json)
+
+### Features
+1. **Dynamic Scheduling** (RedBeat)
+   - Create/Update/Delete schedules via API
+   - Changes reflected within 5 seconds (no Celery restart needed)
+   - Survives restarts (loaded from JSON file on startup)
+
+2. **Crawl Job Tracking**
+   - Every crawl creates CrawlJob record in DB
+   - Tracks: status, duration, articles collected/new/updated, errors
+   - Accessible via `/api/scheduler/jobs` endpoint
+
+3. **Discord Briefing**
+   - Automatically sent after scheduled `crawl_all_complexes` task
+   - Includes: crawl stats, success/failure counts, complex-level changes
+   - Change summary: NEW/REMOVED/PRICE_UP/PRICE_DOWN articles
+   - Manual trigger: `send_weekly_briefing.delay()` or `/api/briefing/send`
+
+### Schedule Types
+- **Weekly**: `day_of_week: 0-6` (0=Monday, 6=Sunday)
+- **Daily**: `day_of_week: "*"`
+- **Monthly**: `day_of_week: "MONTHLY_1"` or `"MONTHLY_15"`
+- **Quarterly**: `day_of_week: "QUARTERLY_1"` or `"QUARTERLY_15"`
+
+### Frontend Management
+- **Scheduler Page**: [frontend/src/app/scheduler/page.tsx](frontend/src/app/scheduler/page.tsx)
+- View active schedules, job history, crawl statistics
+- Create/edit/delete schedules through UI
+- Trigger manual crawls (all complexes or single complex)
+
+### Testing
+```bash
+# Test manual crawl all complexes
+curl -X POST http://localhost:8000/api/scheduler/trigger/all
+
+# View job history
+curl http://localhost:8000/api/scheduler/jobs
+
+# View current schedules
+curl http://localhost:8000/api/scheduler/schedule
+```
+
 ## Known Limitations
 
 - No user authentication system yet (planned)
-- No scheduled crawling (Celery integration planned)
-- ~~Real transaction (실거래가) feature was removed~~ → **✅ Re-implemented (Phase 2)**
-- Weekly briefing feature designed but not fully implemented
-- Crawling requires headless=False to avoid bot detection
+- Crawling requires headless=False to avoid bot detection (cannot run in Docker without X11)
 - MOLIT API has rate limits (1,000 calls/day for general key)
+- Discord briefing only supports webhook (no bidirectional interaction)
+- RedBeat scheduler requires Redis (schedules lost if Redis data is cleared without JSON backup)

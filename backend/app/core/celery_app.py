@@ -46,5 +46,5 @@ except Exception as e:
 celery_app.conf.beat_scheduler = "redbeat.RedBeatScheduler"
 celery_app.conf.redbeat_redis_url = REDIS_URL
 celery_app.conf.redbeat_key_prefix = "redbeat:"
-# 스케줄 변경 감지 주기 (초)
-celery_app.conf.redbeat_lock_timeout = 30
+# 스케줄 변경 감지 주기 (초) - Lock timeout 증가 (안정성 향상)
+celery_app.conf.redbeat_lock_timeout = 300

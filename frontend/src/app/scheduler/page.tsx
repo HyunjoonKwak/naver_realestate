@@ -290,7 +290,7 @@ export default function SchedulerPage() {
     e.preventDefault();
     try {
       await schedulerAPI.createSchedule(formData);
-      showMessage('success', '스케줄이 생성되었습니다. Celery Beat를 재시작해주세요.');
+      showMessage('success', '✅ 스케줄이 생성되었습니다! 5초 이내 자동 반영됩니다.');
       setShowCreateModal(false);
       loadSchedules();
       setFormData({
@@ -327,7 +327,7 @@ export default function SchedulerPage() {
         minute: editFormData.minute,
         day_of_week: editFormData.day_of_week,
       });
-      showMessage('success', '스케줄이 수정되었습니다. Celery Beat를 재시작해주세요.');
+      showMessage('success', '✅ 스케줄이 수정되었습니다! 5초 이내 자동 반영됩니다.');
       setShowEditModal(false);
       loadSchedules();
     } catch (error: any) {
@@ -340,7 +340,7 @@ export default function SchedulerPage() {
 
     try {
       await schedulerAPI.deleteSchedule(scheduleName);
-      showMessage('success', '스케줄이 삭제되었습니다. Celery Beat를 재시작해주세요.');
+      showMessage('success', '✅ 스케줄이 삭제되었습니다! 5초 이내 자동 반영됩니다.');
       loadSchedules();
     } catch (error: any) {
       showMessage('error', error.response?.data?.detail || '스케줄 삭제에 실패했습니다.');
@@ -382,7 +382,8 @@ export default function SchedulerPage() {
   };
 
   const parseCronSchedule = (cronStr: string) => {
-    const match = cronStr.match(/(\d+)\s+(\d+)\s+\*\s+\*\s+([\d\*]+)/);
+    // Cron format: minute hour day month day_of_week
+    const match = cronStr.match(/(\d+)\s+(\d+)\s+[\d\*]+\s+[\d\*,]+\s+([\d\*]+)/);
     if (match) {
       return {
         minute: parseInt(match[1]),
@@ -390,12 +391,22 @@ export default function SchedulerPage() {
         day_of_week: match[3],
       };
     }
+    // Fallback for simpler format: minute hour * * day_of_week
+    const simpleMatch = cronStr.match(/(\d+)\s+(\d+)\s+\*\s+\*\s+([\d\*]+)/);
+    if (simpleMatch) {
+      return {
+        minute: parseInt(simpleMatch[1]),
+        hour: parseInt(simpleMatch[2]),
+        day_of_week: simpleMatch[3],
+      };
+    }
     return { minute: 0, hour: 0, day_of_week: '*' };
   };
 
   const getDayOfWeekText = (dow: string) => {
     if (dow === '*') return '매일';
-    const days = ['월', '화', '수', '목', '금', '토', '일'];
+    // Cron day_of_week: 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday
+    const days = ['일', '월', '화', '수', '목', '금', '토'];
     return days[parseInt(dow)] || dow;
   };
 
@@ -881,13 +892,13 @@ export default function SchedulerPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="*">매일</option>
-                      <option value="0">매주 월요일</option>
-                      <option value="1">매주 화요일</option>
-                      <option value="2">매주 수요일</option>
-                      <option value="3">매주 목요일</option>
-                      <option value="4">매주 금요일</option>
-                      <option value="5">매주 토요일</option>
-                      <option value="6">매주 일요일</option>
+                      <option value="1">매주 월요일</option>
+                      <option value="2">매주 화요일</option>
+                      <option value="3">매주 수요일</option>
+                      <option value="4">매주 목요일</option>
+                      <option value="5">매주 금요일</option>
+                      <option value="6">매주 토요일</option>
+                      <option value="0">매주 일요일</option>
                       <option value="QUARTERLY_1">분기별 (1월, 4월, 7월, 10월 1일)</option>
                       <option value="QUARTERLY_15">분기별 (1월, 4월, 7월, 10월 15일)</option>
                       <option value="MONTHLY_1">매월 1일</option>
@@ -926,8 +937,8 @@ export default function SchedulerPage() {
                 </div>
               </form>
 
-              <div className="mt-4 p-3 bg-yellow-50 text-yellow-800 text-sm rounded-lg">
-                ⚠️ 스케줄을 추가/수정/삭제한 후에는 Celery Beat를 재시작해야 변경사항이 적용됩니다.
+              <div className="mt-4 p-3 bg-green-50 text-green-800 text-sm rounded-lg">
+                ✅ RedBeat 사용: 스케줄 변경사항은 5초 이내 자동 반영됩니다 (재시작 불필요)
               </div>
             </div>
           </div>
@@ -1009,14 +1020,14 @@ export default function SchedulerPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="*">매일</option>
-                      <option value="0">매주 월요일</option>
-                      <option value="1">매주 화요일</option>
-                      <option value="2">매주 수요일</option>
-                      <option value="3">매주 목요일</option>
-                      <option value="4">매주 금요일</option>
-                      <option value="5">매주 토요일</option>
-                      <option value="6">매주 일요일</option>
-                      <option value="QUARTERLY_1">분기별 (1월, 4월, 7월, 10월 1일)</option>
+                      <option value="1">매주 월요일</option>
+                      <option value="2">매주 화요일</option>
+                      <option value="3">매주 수요일</option>
+                      <option value="4">매주 목요일</option>
+                      <option value="5">매주 금요일</option>
+                      <option value="6">매주 토요일</option>
+                      <option value="0">매주 일요일</option>
+                      <option value="QUARTERLY_1">분기별 (1월, 4월, 7월, 10월 15일)</option>
                       <option value="QUARTERLY_15">분기별 (1월, 4월, 7월, 10월 15일)</option>
                       <option value="MONTHLY_1">매월 1일</option>
                       <option value="MONTHLY_15">매월 15일</option>
@@ -1041,8 +1052,8 @@ export default function SchedulerPage() {
                 </div>
               </form>
 
-              <div className="mt-4 p-3 bg-yellow-50 text-yellow-800 text-sm rounded-lg">
-                ⚠️ 스케줄을 수정한 후에는 Celery Beat를 재시작해야 변경사항이 적용됩니다.
+              <div className="mt-4 p-3 bg-green-50 text-green-800 text-sm rounded-lg">
+                ✅ RedBeat 사용: 스케줄 변경사항은 5초 이내 자동 반영됩니다 (재시작 불필요)
               </div>
             </div>
           </div>

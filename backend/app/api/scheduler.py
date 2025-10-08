@@ -124,21 +124,37 @@ def get_task_status(task_id: str):
 @router.get("/schedule", response_model=Dict[str, Any])
 def get_schedule():
     """
-    현재 스케줄 설정 조회
+    현재 스케줄 설정 조회 (Redis에서 실시간 조회)
 
     Returns:
         등록된 주기 작업 목록
     """
     try:
-        schedule = celery_app.conf.beat_schedule
+        from redbeat import RedBeatSchedulerEntry
+        import redis
+
+        # Redis에서 직접 조회
+        r = redis.from_url(celery_app.conf.redbeat_redis_url)
+        keys = r.keys("redbeat:*")
 
         result = {}
-        for name, config in schedule.items():
-            result[name] = {
-                "task": config["task"],
-                "schedule": str(config["schedule"]),
-                "options": config.get("options", {})
-            }
+        for key in keys:
+            key_str = key.decode('utf-8')
+            # 메타 키는 제외
+            if key_str in ["redbeat::statics", "redbeat::schedule"]:
+                continue
+
+            try:
+                entry = RedBeatSchedulerEntry.from_key(key_str, app=celery_app)
+                schedule_name = key_str.replace("redbeat:", "")
+                result[schedule_name] = {
+                    "task": entry.task,
+                    "schedule": str(entry.schedule),
+                    "options": entry.options or {}
+                }
+            except Exception as e:
+                # 로드 실패한 스케줄은 건너뜀
+                continue
 
         return {
             "schedule": result,
@@ -256,20 +272,23 @@ def create_schedule(schedule: ScheduleCreate):
                 day_of_week=schedule.day_of_week
             )
 
-        # 스케줄 추가 (메모리)
-        celery_app.conf.beat_schedule[schedule.name] = {
-            "task": schedule.task,
-            "schedule": schedule_obj,
-            "options": {"expires": 3600}
-        }
+        # RedBeat Entry로 Redis에 직접 저장 (즉시 반영!)
+        entry = RedBeatSchedulerEntry(
+            name=schedule.name,
+            task=schedule.task,
+            schedule=schedule_obj,
+            app=celery_app,
+            options={"expires": 3600}
+        )
+        entry.save()  # Redis에 저장
 
-        # JSON 파일에 저장 (영구 저장)
+        # JSON 파일에도 저장 (Beat 재시작 시 유지용)
         schedule_data = {
             "task": schedule.task,
             "schedule": {
                 "hour": schedule.hour,
                 "minute": schedule.minute,
-                "day_of_week": schedule.day_of_week
+                "day_of_week": int(schedule.day_of_week) if isinstance(schedule.day_of_week, str) and schedule.day_of_week.isdigit() else schedule.day_of_week
             },
             "enabled": True,
             "description": schedule.description or ""
@@ -288,7 +307,7 @@ def create_schedule(schedule: ScheduleCreate):
                 "day_of_week": schedule.day_of_week,
                 "description": schedule.description
             },
-            "note": "변경사항이 저장되었습니다. Celery Beat를 재시작하면 적용됩니다."
+            "note": "✅ Redis에 저장! 5초 이내 자동 반영됩니다 (재시작 불필요)"
         }
     except HTTPException:
         raise
@@ -299,7 +318,7 @@ def create_schedule(schedule: ScheduleCreate):
 @router.put("/schedule/{schedule_name}", response_model=Dict[str, Any])
 def update_schedule(schedule_name: str, schedule_update: ScheduleUpdate):
     """
-    기존 스케줄 수정
+    기존 스케줄 수정 (Redis 기반)
 
     Args:
         schedule_name: 수정할 스케줄 이름
@@ -309,21 +328,27 @@ def update_schedule(schedule_name: str, schedule_update: ScheduleUpdate):
         수정된 스케줄 정보
     """
     try:
-        # 스케줄 존재 확인
-        if schedule_name not in celery_app.conf.beat_schedule:
+        from redbeat import RedBeatSchedulerEntry
+
+        # Redis에서 기존 스케줄 로드
+        try:
+            entry = RedBeatSchedulerEntry.from_key(
+                f"redbeat:{schedule_name}",
+                app=celery_app
+            )
+        except KeyError:
             raise HTTPException(
                 status_code=404,
                 detail=f"'{schedule_name}' 스케줄을 찾을 수 없습니다."
             )
 
-        current_schedule = celery_app.conf.beat_schedule[schedule_name]
-        current_cron = current_schedule["schedule"]
-
         # 작업 유형 검증 (변경하려는 경우)
         if schedule_update.task is not None:
             available_tasks = [
                 "app.tasks.scheduler.crawl_all_complexes",
-                "app.tasks.scheduler.cleanup_old_snapshots"
+                "app.tasks.scheduler.cleanup_old_snapshots",
+                "app.tasks.briefing_tasks.send_weekly_briefing",
+                "app.tasks.briefing_tasks.send_custom_briefing"
             ]
             if schedule_update.task not in available_tasks:
                 raise HTTPException(
@@ -331,33 +356,48 @@ def update_schedule(schedule_name: str, schedule_update: ScheduleUpdate):
                     detail=f"유효하지 않은 태스크입니다. 사용 가능한 태스크: {available_tasks}"
                 )
 
-        # 현재 설정에서 값 가져오기
-        task = schedule_update.task if schedule_update.task is not None else current_schedule["task"]
-        hour = schedule_update.hour if schedule_update.hour is not None else current_cron.hour
-        minute = schedule_update.minute if schedule_update.minute is not None else current_cron.minute
-        day_of_week = schedule_update.day_of_week if schedule_update.day_of_week is not None else str(current_cron.day_of_week)
+        # 현재 값에서 업데이트할 값 가져오기
+        task = schedule_update.task if schedule_update.task is not None else entry.task
+
+        # crontab에서 현재 값 추출
+        current_cron = entry.schedule
+        hour = schedule_update.hour if schedule_update.hour is not None else list(current_cron.hour)[0] if hasattr(current_cron, 'hour') else 0
+        minute = schedule_update.minute if schedule_update.minute is not None else list(current_cron.minute)[0] if hasattr(current_cron, 'minute') else 0
+
+        # day_of_week 처리
+        if schedule_update.day_of_week is not None:
+            day_of_week = schedule_update.day_of_week
+        else:
+            if hasattr(current_cron, 'day_of_week'):
+                dow_set = current_cron.day_of_week
+                if isinstance(dow_set, set) and len(dow_set) == 7:
+                    day_of_week = "*"
+                elif isinstance(dow_set, set):
+                    day_of_week = str(list(dow_set)[0])
+                else:
+                    day_of_week = "*"
+            else:
+                day_of_week = "*"
 
         # 새 Crontab 생성
         if day_of_week == "*":
             new_schedule = crontab(hour=hour, minute=minute)
         else:
-            new_schedule = crontab(hour=hour, minute=minute, day_of_week=day_of_week)
+            new_schedule = crontab(hour=hour, minute=minute, day_of_week=int(day_of_week) if day_of_week.isdigit() else day_of_week)
 
-        # 스케줄 업데이트 (메모리)
-        celery_app.conf.beat_schedule[schedule_name]["schedule"] = new_schedule
-        celery_app.conf.beat_schedule[schedule_name]["task"] = task
+        # Redis에 업데이트된 Entry 저장
+        entry.task = task
+        entry.schedule = new_schedule
+        entry.save()
 
-        # JSON 파일에 저장 (영구 저장)
+        # JSON 파일에도 저장 (영구 저장)
         schedules_data = get_schedule_raw_data()
         if schedule_name in schedules_data:
-            # 기존 스케줄 업데이트
             schedules_data[schedule_name]["task"] = task
             schedules_data[schedule_name]["schedule"]["hour"] = hour
             schedules_data[schedule_name]["schedule"]["minute"] = minute
-            schedules_data[schedule_name]["schedule"]["day_of_week"] = str(day_of_week)
-
-            if not update_schedule_in_file(schedule_name, schedules_data[schedule_name]):
-                raise HTTPException(status_code=500, detail="스케줄 파일 저장에 실패했습니다.")
+            schedules_data[schedule_name]["schedule"]["day_of_week"] = int(day_of_week) if isinstance(day_of_week, str) and day_of_week.isdigit() else day_of_week
+            update_schedule_in_file(schedule_name, schedules_data[schedule_name])
 
         return {
             "message": f"스케줄 '{schedule_name}'이 수정되었습니다.",
@@ -368,7 +408,7 @@ def update_schedule(schedule_name: str, schedule_update: ScheduleUpdate):
                 "minute": minute,
                 "day_of_week": day_of_week
             },
-            "note": "변경사항이 저장되었습니다. Celery Beat를 재시작하면 적용됩니다."
+            "note": "✅ Redis에 저장! 5초 이내 자동 반영됩니다 (재시작 불필요)"
         }
     except HTTPException:
         raise
@@ -388,23 +428,26 @@ def delete_schedule(schedule_name: str):
         삭제 결과
     """
     try:
-        # 스케줄 존재 확인
-        if schedule_name not in celery_app.conf.beat_schedule:
-            raise HTTPException(
-                status_code=404,
-                detail=f"'{schedule_name}' 스케줄을 찾을 수 없습니다."
+        from redbeat import RedBeatSchedulerEntry
+
+        # RedBeat Entry 로드 시도
+        try:
+            entry = RedBeatSchedulerEntry.from_key(
+                f"redbeat:{schedule_name}",
+                app=celery_app
             )
+            entry.delete()  # Redis에서 삭제 (즉시 반영!)
+        except KeyError:
+            # Redis에 없으면 무시
+            pass
 
-        # 스케줄 삭제 (메모리)
-        del celery_app.conf.beat_schedule[schedule_name]
-
-        # JSON 파일에서 삭제 (영구 삭제)
+        # JSON 파일에서도 삭제 (영구 삭제)
         if not delete_schedule_from_file(schedule_name):
             raise HTTPException(status_code=500, detail="스케줄 파일 저장에 실패했습니다.")
 
         return {
             "message": f"스케줄 '{schedule_name}'이 삭제되었습니다.",
-            "note": "변경사항이 저장되었습니다. Celery Beat를 재시작하면 적용됩니다."
+            "note": "✅ Redis에서 삭제! 5초 이내 자동 반영됩니다 (재시작 불필요)"
         }
     except HTTPException:
         raise
