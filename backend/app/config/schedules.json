@@ -12,8 +12,8 @@
   "test crawling": {
     "task": "app.tasks.scheduler.crawl_all_complexes",
     "schedule": {
-      "hour": 21,
-      "minute": 0,
+      "hour": 22,
+      "minute": 10,
       "day_of_week": 3
     },
     "enabled": true,
