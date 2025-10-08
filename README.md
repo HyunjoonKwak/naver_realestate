@@ -20,12 +20,13 @@
   - 💹 면적별 가격 정보 카드
   - 📱 반응형 디자인 (모바일/태블릿/데스크톱)
 
-### ✅ 최근 완료 (2025-10-07)
-- 📧 **주간 브리핑 시스템**: 매물 변동사항 자동 요약 및 알림
+### ✅ 최근 완료 (2025-10-08)
+- 🤖 **자동 크롤링 + Discord 브리핑**: 스케줄러 크롤링 완료 후 자동 브리핑
   - Discord Webhook 연동
-  - 매주 월요일 09:00 자동 발송
-  - 신규/삭제/가격변동 통계
-  - REST API로 수동 발송 가능
+  - 크롤링 통계 (성공/실패 단지, 수집 매물 수, 소요시간)
+  - 주간 변동사항 요약 (신규/삭제/가격변동)
+  - 단지별 상세 정보
+  - 매주 월요일 06:00 자동 실행 → 브리핑 전송
 
 ### 🚧 개발 예정
 - 🏛️ **실거래가 기능**: 국토부 실거래가 공개시스템 연동
@@ -67,7 +68,7 @@ npm run dev
 - 네이버 부동산 URL 입력 (예: `https://new.land.naver.com/complexes/1482`)
 - 크롤링이 백그라운드에서 자동 실행됩니다
 
-### 6. 주간 브리핑 설정 (선택사항)
+### 6. 자동 크롤링 & Discord 브리핑 설정 (선택사항)
 ```bash
 # .env 파일 생성 및 Discord Webhook URL 설정
 cp .env.example .env
@@ -77,6 +78,8 @@ cp .env.example .env
 cd backend
 ./run_celery_worker.sh  # 새 터미널 1
 ./run_celery_beat.sh     # 새 터미널 2
+
+# 스케줄: 매주 월요일 06:00 - 모든 단지 크롤링 → Discord 브리핑 자동 전송
 ```
 
 ### 7. 참고
@@ -140,7 +143,8 @@ naver_realestate/
 - [프로젝트 개요](docs/PROJECT_OVERVIEW.md)
 - [진행 상황 요약](docs/PROGRESS_SUMMARY.md)
 - [API 가이드](docs/API_GUIDE.md) ⭐
-- [Webhook 설정 가이드](docs/WEBHOOK_SETUP_GUIDE.md) 🆕
+- [Discord 브리핑 설정 가이드](docs/DISCORD_BRIEFING_GUIDE.md) 🆕
+- [Webhook 설정 가이드](docs/WEBHOOK_SETUP_GUIDE.md)
 - [국토부 실거래가 API 연동](docs/MOLIT_API_INTEGRATION.md)
 - [주간 브리핑 기능 설계](docs/WEEKLY_BRIEFING_FEATURE.md)
 - [구현 체크리스트](docs/IMPLEMENTATION_CHECKLIST.md)

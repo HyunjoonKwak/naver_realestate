@@ -184,7 +184,7 @@ def get_scheduler_status():
 @router.post("/schedule", response_model=Dict[str, Any])
 def create_schedule(schedule: ScheduleCreate):
     """
-    새로운 스케줄 생성
+    새로운 스케줄 생성 (RedBeat 사용 - 재시작 불필요!)
 
     Args:
         schedule: 스케줄 정보
@@ -193,6 +193,7 @@ def create_schedule(schedule: ScheduleCreate):
         생성된 스케줄 정보
     """
     try:
+        from redbeat import RedBeatSchedulerEntry
         # 태스크 이름 검증
         available_tasks = [
             "app.tasks.scheduler.crawl_all_complexes",

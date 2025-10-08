@@ -116,6 +116,30 @@ def crawl_all_complexes(self, job_type='scheduled'):
         logger.info(f"   수집: {results['total_articles_collected']}건, 신규: {results['total_articles_new']}건")
         logger.info("=" * 80)
 
+        # 크롤링 완료 후 디스코드 브리핑 전송
+        try:
+            from app.services.briefing_service import BriefingService
+            briefing_service = BriefingService(db)
+
+            logger.info("📊 브리핑 생성 및 전송 중...")
+            briefing_result = briefing_service.send_briefing(
+                days=7,
+                to_slack=False,  # Slack은 비활성화
+                to_discord=True,  # Discord만 전송
+                crawl_stats=results  # 크롤링 통계 전달
+            )
+
+            if briefing_result.get('success'):
+                logger.info("✅ 디스코드 브리핑 전송 완료")
+            elif briefing_result.get('skipped'):
+                logger.info(f"ℹ️  브리핑 건너뜀: {briefing_result.get('reason')}")
+            else:
+                logger.warning(f"⚠️  브리핑 전송 실패: {briefing_result.get('error')}")
+
+        except Exception as e:
+            logger.error(f"❌ 브리핑 생성/전송 중 오류: {str(e)}")
+            # 브리핑 실패는 크롤링 성공에 영향을 주지 않음
+
     except Exception as e:
         logger.error(f"자동 크롤링 중 오류 발생: {str(e)}")
         results["errors"].append(f"전체 작업 오류: {str(e)}")

@@ -160,7 +160,8 @@ class BriefingService:
         self,
         days: int = 7,
         to_slack: bool = True,
-        to_discord: bool = True
+        to_discord: bool = True,
+        crawl_stats: Dict = None
     ) -> Dict:
         """
         주간 브리핑 생성 및 발송
@@ -169,12 +170,17 @@ class BriefingService:
             days: 조회할 일수
             to_slack: Slack 전송 여부
             to_discord: Discord 전송 여부
+            crawl_stats: 크롤링 통계 (선택사항)
 
         Returns:
             발송 결과 딕셔너리
         """
         # 브리핑 생성
         briefing = self.generate_weekly_briefing(days=days, mark_as_read=True)
+
+        # 크롤링 통계 추가
+        if crawl_stats:
+            briefing['crawl_stats'] = crawl_stats
 
         # 알림 채널이 설정되지 않은 경우
         if not self.notification_manager.is_configured():
@@ -197,6 +203,12 @@ class BriefingService:
 
         # 알림 발송
         markdown = briefing['markdown']
+
+        # 크롤링 통계가 있으면 마크다운에 추가
+        if crawl_stats:
+            crawl_summary = self._generate_crawl_summary_markdown(crawl_stats)
+            markdown = crawl_summary + "\n\n" + markdown
+
         results = {}
 
         if to_slack and self.notification_manager.slack.webhook_url:
@@ -323,3 +335,52 @@ class BriefingService:
             'price_down': 0,
             'total': 0
         }
+
+    @staticmethod
+    def _generate_crawl_summary_markdown(crawl_stats: Dict) -> str:
+        """
+        크롤링 통계 요약 마크다운 생성
+
+        Args:
+            crawl_stats: 크롤링 통계 딕셔너리
+
+        Returns:
+            마크다운 문자열
+        """
+        lines = []
+        lines.append("# 🤖 자동 크롤링 완료")
+        lines.append("")
+
+        # 시작/종료 시간
+        started_at = crawl_stats.get('started_at', '')
+        finished_at = crawl_stats.get('finished_at', '')
+        if started_at and finished_at:
+            from datetime import datetime
+            start_dt = datetime.fromisoformat(started_at.replace('Z', '+00:00'))
+            finish_dt = datetime.fromisoformat(finished_at.replace('Z', '+00:00'))
+            lines.append(f"⏰ **시작**: {start_dt.strftime('%Y-%m-%d %H:%M:%S')}")
+            lines.append(f"⏰ **완료**: {finish_dt.strftime('%Y-%m-%d %H:%M:%S')}")
+            duration = crawl_stats.get('duration_seconds', 0)
+            lines.append(f"⏱️ **소요시간**: {duration}초 ({duration // 60}분 {duration % 60}초)")
+            lines.append("")
+
+        # 크롤링 결과
+        lines.append("## 📊 크롤링 결과")
+        lines.append(f"- 대상 단지: **{crawl_stats.get('total_complexes', 0)}개**")
+        lines.append(f"- 성공: **{crawl_stats.get('success', 0)}개** ✅")
+        lines.append(f"- 실패: **{crawl_stats.get('failed', 0)}개** ❌")
+        lines.append(f"- 수집 매물: **{crawl_stats.get('total_articles_collected', 0)}건**")
+        lines.append(f"- 신규 매물: **{crawl_stats.get('total_articles_new', 0)}건** 🆕")
+
+        # 에러가 있으면 표시
+        errors = crawl_stats.get('errors', [])
+        if errors:
+            lines.append("")
+            lines.append("### ⚠️ 오류 발생")
+            for error in errors[:3]:  # 최대 3개만 표시
+                lines.append(f"- {error}")
+
+        lines.append("")
+        lines.append("---")
+
+        return "\n".join(lines)

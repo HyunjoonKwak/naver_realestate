@@ -42,5 +42,9 @@ except Exception as e:
     celery_app.conf.beat_schedule = {}
 
 # Celery beat 설정 (스케줄러)
-celery_app.conf.beat_scheduler = "celery.beat:PersistentScheduler"
-celery_app.conf.beat_schedule_filename = "/tmp/celerybeat-schedule"
+# RedBeat 사용: Redis 기반 동적 스케줄러 (재시작 없이 스케줄 변경 가능)
+celery_app.conf.beat_scheduler = "redbeat.RedBeatScheduler"
+celery_app.conf.redbeat_redis_url = REDIS_URL
+celery_app.conf.redbeat_key_prefix = "redbeat:"
+# 스케줄 변경 감지 주기 (초)
+celery_app.conf.redbeat_lock_timeout = 30

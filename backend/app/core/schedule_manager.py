@@ -18,6 +18,11 @@ def load_schedules_from_file() -> Dict[str, Any]:
 
     Returns:
         스케줄 설정 딕셔너리
+
+    Note:
+        day_of_week 값:
+        - Celery crontab: 0=일요일, 1=월요일, 2=화요일, 3=수요일, 4=목요일, 5=금요일, 6=토요일
+        - schedules.json에서도 동일한 값 사용 (0-6)
     """
     if not SCHEDULE_FILE.exists():
         # 파일이 없으면 빈 딕셔너리 반환
@@ -36,6 +41,11 @@ def load_schedules_from_file() -> Dict[str, Any]:
 
             schedule_config = config['schedule']
             day_of_week = schedule_config.get('day_of_week', '*')
+
+            # 문자열을 정수로 변환 (필요시)
+            if day_of_week != '*' and not isinstance(day_of_week, (list, tuple)):
+                if isinstance(day_of_week, str) and day_of_week.isdigit():
+                    day_of_week = int(day_of_week)
 
             # crontab 객체 생성
             if day_of_week == '*':
