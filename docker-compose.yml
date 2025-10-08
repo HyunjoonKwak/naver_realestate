@@ -25,7 +25,7 @@ services:
     image: redis:7-alpine
     container_name: naver_realestate_redis
     ports:
-      - "6379:6379"
+      - "6380:6379"  # 로컬은 6380 포트 사용 (NAS와 분리)
     volumes:
       - redis_data:/data
     healthcheck:
