@@ -193,13 +193,17 @@ class BriefingService:
 
         # 변동사항이 없는 경우
         if briefing['total_summary']['total'] == 0:
-            logger.info("ℹ️  변동사항이 없어 알림을 전송하지 않습니다.")
-            return {
-                'success': True,
-                'skipped': True,
-                'reason': 'No changes to report',
-                'briefing': briefing
-            }
+            # 크롤링 통계가 있으면 "변동사항 없음" 메시지로 브리핑 전송
+            if not crawl_stats:
+                logger.info("ℹ️  변동사항이 없어 알림을 전송하지 않습니다.")
+                return {
+                    'success': True,
+                    'skipped': True,
+                    'reason': 'No changes to report',
+                    'briefing': briefing
+                }
+            # 크롤링 통계가 있으면 계속 진행하여 "변동사항 없음" 브리핑 전송
+            logger.info("ℹ️  변동사항은 없지만 크롤링 통계 브리핑을 전송합니다.")
 
         # 알림 발송
         markdown = briefing['markdown']
@@ -314,9 +318,15 @@ class BriefingService:
         lines.append("")
         lines.append(f"📅 **기간**: {start_date.strftime('%Y-%m-%d')} ~ {end_date.strftime('%Y-%m-%d')}")
         lines.append("")
-        lines.append("## ℹ️  변동사항 없음")
+        lines.append("## ✅ 변동사항 없음")
         lines.append("")
-        lines.append("지난 주간 등록된 단지에서 변동사항이 없거나, 등록된 단지가 없습니다.")
+        lines.append("✨ 지난 주간 모니터링 대상 단지의 매물 가격 및 매물 수에 변동이 없습니다.")
+        lines.append("")
+        lines.append("- 신규 매물: 없음")
+        lines.append("- 삭제된 매물: 없음")
+        lines.append("- 가격 변동: 없음")
+        lines.append("")
+        lines.append("💡 시장이 안정적인 상태를 유지하고 있습니다.")
         lines.append("")
         lines.append("---")
         lines.append("")

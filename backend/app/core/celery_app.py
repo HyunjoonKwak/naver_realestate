@@ -2,8 +2,19 @@
 Celery 애플리케이션 설정
 """
 import os
+from pathlib import Path
 from celery import Celery
 from celery.schedules import crontab
+
+# .env 파일 수동 로드 (Celery worker에서 환경변수 사용)
+env_path = Path(__file__).parent.parent.parent / '.env'
+if env_path.exists():
+    with open(env_path) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                key, value = line.split('=', 1)
+                os.environ.setdefault(key, value)
 
 # Redis 연결 설정
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
@@ -46,5 +57,5 @@ except Exception as e:
 celery_app.conf.beat_scheduler = "redbeat.RedBeatScheduler"
 celery_app.conf.redbeat_redis_url = REDIS_URL
 celery_app.conf.redbeat_key_prefix = "redbeat:"
-# 스케줄 변경 감지 주기 (초) - Lock timeout 증가 (안정성 향상)
-celery_app.conf.redbeat_lock_timeout = 300
+# Lock timeout을 30분으로 증가 (크롤링 작업이 길어질 수 있음)
+celery_app.conf.redbeat_lock_timeout = 1800  # 30분 (기존: 300초 = 5분)

@@ -180,11 +180,29 @@ def get_scheduler_status():
         active_workers = inspect.active()
         registered_tasks = inspect.registered()
 
+        # Beat 상태 확인 (Redis lock으로 확인)
+        beat_active = False
+        beat_lock_ttl = None
+        try:
+            import redis
+            r = redis.from_url(celery_app.conf.redbeat_redis_url)
+            lock_key = "redbeat::lock"
+            beat_lock_ttl = r.ttl(lock_key)
+            # TTL이 양수면 Beat가 락을 보유 중 (실행 중)
+            beat_active = beat_lock_ttl > 0
+        except Exception as beat_error:
+            # Redis 연결 실패 시 Beat 상태를 알 수 없음
+            pass
+
         return {
             "workers": {
                 "active": active_workers is not None,
                 "count": len(active_workers) if active_workers else 0,
                 "details": active_workers
+            },
+            "beat": {
+                "active": beat_active,
+                "lock_ttl": beat_lock_ttl if beat_lock_ttl and beat_lock_ttl > 0 else None
             },
             "registered_tasks": registered_tasks,
             "beat_schedule": list(celery_app.conf.beat_schedule.keys())
@@ -192,6 +210,7 @@ def get_scheduler_status():
     except Exception as e:
         return {
             "workers": {"active": False, "count": 0},
+            "beat": {"active": False, "lock_ttl": None},
             "error": str(e),
             "message": "Celery worker가 실행되지 않았습니다. 'celery -A app.core.celery_app worker' 명령으로 시작하세요."
         }

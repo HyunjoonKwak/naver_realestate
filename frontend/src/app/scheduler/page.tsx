@@ -84,6 +84,10 @@ interface WorkerStatus {
     active: boolean;
     count: number;
   };
+  beat?: {
+    active: boolean;
+    lock_ttl?: number;
+  };
 }
 
 export default function SchedulerPage() {
@@ -540,14 +544,19 @@ export default function SchedulerPage() {
               <div>
                 <p className="text-sm text-gray-600">Celery Beat</p>
                 <p className="text-2xl font-bold mt-1">
-                  {workerStatus?.beat_schedule && workerStatus.beat_schedule.length > 0 ? (
+                  {workerStatus?.beat?.active ? (
                     <span className="text-green-600">활성</span>
                   ) : (
                     <span className="text-red-600">비활성</span>
                   )}
                 </p>
+                {workerStatus?.beat?.lock_ttl && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Lock TTL: {Math.floor(workerStatus.beat.lock_ttl / 60)}분
+                  </p>
+                )}
               </div>
-              <div className={`w-4 h-4 rounded-full ${workerStatus?.beat_schedule && workerStatus.beat_schedule.length > 0 ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+              <div className={`w-4 h-4 rounded-full ${workerStatus?.beat?.active ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
             </div>
           </div>
 
