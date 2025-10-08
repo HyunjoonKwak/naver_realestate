@@ -72,7 +72,7 @@ export default function Home() {
             changes_24h: changesRes.data.summary,
             min_price: complex.min_price,
             max_price: complex.max_price,
-          };
+          } as ComplexStats;
         } catch (err) {
           console.log(`단지 ${complex.complex_id} 통계 로딩 실패`);
           return null;
