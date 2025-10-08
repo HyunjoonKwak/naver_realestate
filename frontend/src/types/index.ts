@@ -52,6 +52,7 @@ export interface Article {
 export interface Transaction {
   id: number;
   complex_id: string;
+  complex_name?: string;
   trade_type?: string;
   trade_date?: string;
   deal_price?: number;
