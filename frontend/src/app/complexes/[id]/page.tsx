@@ -528,7 +528,7 @@ export default function ComplexDetailPage() {
       })()}
 
       {/* 최근 매매 실거래가 정보 */}
-      {stats && stats.transactions.recent && (
+      {stats && stats.transactions?.recent && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="px-6 py-4 border-b bg-gradient-to-r from-green-50 to-emerald-50">
             <h2 className="text-xl font-semibold text-gray-900">최근 매매 실거래가</h2>
