@@ -183,6 +183,7 @@ def get_scheduler_status():
         # Beat 상태 확인 (Redis lock으로 확인)
         beat_active = False
         beat_lock_ttl = None
+        beat_schedule_keys = []
         try:
             import redis
             r = redis.from_url(celery_app.conf.redbeat_redis_url)
@@ -190,6 +191,15 @@ def get_scheduler_status():
             beat_lock_ttl = r.ttl(lock_key)
             # TTL이 양수면 Beat가 락을 보유 중 (실행 중)
             beat_active = beat_lock_ttl > 0
+
+            # Redis에서 실제 스케줄 목록 조회
+            keys = r.keys("redbeat:*")
+            for key in keys:
+                key_str = key.decode('utf-8')
+                # 메타 키 제외 (lock, statics, schedule)
+                if key_str not in ["redbeat::lock", "redbeat::statics", "redbeat::schedule"]:
+                    schedule_name = key_str.replace("redbeat:", "")
+                    beat_schedule_keys.append(schedule_name)
         except Exception as beat_error:
             # Redis 연결 실패 시 Beat 상태를 알 수 없음
             pass
@@ -205,7 +215,7 @@ def get_scheduler_status():
                 "lock_ttl": beat_lock_ttl if beat_lock_ttl and beat_lock_ttl > 0 else None
             },
             "registered_tasks": registered_tasks,
-            "beat_schedule": list(celery_app.conf.beat_schedule.keys())
+            "beat_schedule": beat_schedule_keys  # Redis 기반 실제 스케줄 목록
         }
     except Exception as e:
         return {
