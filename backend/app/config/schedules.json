@@ -1,20 +1,10 @@
 {
-  "weekly update": {
+  "testtest": {
     "task": "app.tasks.scheduler.crawl_all_complexes",
     "schedule": {
-      "hour": 9,
+      "hour": 6,
       "minute": 0,
-      "day_of_week": 1
-    },
-    "enabled": true,
-    "description": ""
-  },
-  "test crawling": {
-    "task": "app.tasks.scheduler.crawl_all_complexes",
-    "schedule": {
-      "hour": 23,
-      "minute": 0,
-      "day_of_week": 3
+      "day_of_week": "*"
     },
     "enabled": true,
     "description": ""
