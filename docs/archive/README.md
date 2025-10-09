@@ -58,13 +58,22 @@
 - `TRANSACTION_GUIDE.md`가 실제 구현을 정확히 반영
 - 설계 문서와 사용자 가이드가 혼재하여 혼란 방지
 
+### 로컬 개발 환경 설정 (Deprecated - 2025-10-10)
+- `LAPTOP_SETUP.md` - 맥북 개발 환경 설정 가이드
+
+**아카이브 사유**:
+- `SETUP_GUIDE.md`에 모든 내용 통합
+- 1인 개발 환경(맥/맥북)에 특화된 단일 문서로 개편
+- Docker 서비스 관리, 작업 시작/종료 흐름 등 내용 강화
+- 문서 중복 제거 및 유지보수 효율화
+
 ## 📚 최신 문서
 
 현재 프로젝트의 최신 문서는 다음을 참고하세요:
 
 - **[CLAUDE.md](../../CLAUDE.md)** - AI 어시스턴트를 위한 전체 프로젝트 가이드
 - **[README.md](../../README.md)** - 프로젝트 소개 및 빠른 시작
-- **[docs/LAPTOP_SETUP.md](../LAPTOP_SETUP.md)** - 맥북에서 개발 환경 설정 가이드
+- **[docs/SETUP_GUIDE.md](../SETUP_GUIDE.md)** - 개발 환경 설정 가이드 (맥/맥북)
 - **[docs/DYNAMIC_SCHEDULING.md](../DYNAMIC_SCHEDULING.md)** - 스케줄러 기능 상세 가이드
 - **[docs/TRANSACTION_GUIDE.md](../TRANSACTION_GUIDE.md)** - 실거래가 기능 가이드
 - **[docs/DISCORD_BRIEFING_GUIDE.md](../DISCORD_BRIEFING_GUIDE.md)** - Discord 브리핑 설정
