@@ -4,8 +4,6 @@ import { useState, useEffect } from 'react';
 import { schedulerAPI } from '@/lib/api';
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
 interface CrawlJob {
   id: number;
   job_id: string;
@@ -91,6 +89,14 @@ interface WorkerStatus {
 }
 
 export default function SchedulerPage() {
+  // API Base URL - 브라우저에서는 현재 호스트의 8000 포트 사용
+  const [apiBaseUrl] = useState(() => {
+    if (typeof window === 'undefined') {
+      return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    }
+    return process.env.NEXT_PUBLIC_API_URL || `http://${window.location.hostname}:8000`;
+  });
+
   const [activeTab, setActiveTab] = useState<'monitor' | 'schedule'>('monitor');
 
   // 모니터링 상태
@@ -180,12 +186,12 @@ export default function SchedulerPage() {
     try {
       // Fast API calls first
       const [jobsRes, statsRes, runningRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/api/scheduler/jobs`, {
+        axios.get(`${apiBaseUrl}/api/scheduler/jobs`, {
           params: filterStatus !== 'all' ? { status: filterStatus } : {},
           timeout: 3000
         }),
-        axios.get(`${API_BASE_URL}/api/scheduler/stats`, { timeout: 3000 }),
-        axios.get(`${API_BASE_URL}/api/scheduler/jobs/running/current`, { timeout: 3000 })
+        axios.get(`${apiBaseUrl}/api/scheduler/stats`, { timeout: 3000 }),
+        axios.get(`${apiBaseUrl}/api/scheduler/jobs/running/current`, { timeout: 3000 })
       ]);
 
       setJobs(jobsRes.data.jobs || []);
@@ -196,7 +202,7 @@ export default function SchedulerPage() {
 
       // Fetch status separately (slower, non-blocking)
       if (!silent || !workerStatus) {
-        axios.get(`${API_BASE_URL}/api/scheduler/status`, { timeout: 3000 })
+        axios.get(`${apiBaseUrl}/api/scheduler/status`, { timeout: 3000 })
           .then(res => setWorkerStatus(res.data))
           .catch(err => console.error('Status fetch failed:', err));
       }
@@ -241,7 +247,7 @@ export default function SchedulerPage() {
 
     setTriggeringAll(true);
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/scheduler/trigger/all`);
+      const response = await axios.post(`${apiBaseUrl}/api/scheduler/trigger/all`);
       showMessage('success', `크롤링이 시작되었습니다! Job ID: ${response.data.job_id}`);
       if (activeTab === 'monitor') fetchMonitoringData();
     } catch (error: any) {
@@ -255,7 +261,7 @@ export default function SchedulerPage() {
     if (!confirm(`${complexName} 크롤링을 시작하시겠습니까?`)) return;
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/scheduler/trigger/${complexId}`);
+      const response = await axios.post(`${apiBaseUrl}/api/scheduler/trigger/${complexId}`);
       showMessage('success', `크롤링이 시작되었습니다! Job ID: ${response.data.job_id}`);
       if (activeTab === 'monitor') fetchMonitoringData();
     } catch (error: any) {
@@ -267,7 +273,7 @@ export default function SchedulerPage() {
     if (!confirm(`'${jobName}' 작업을 삭제하시겠습니까?`)) return;
 
     try {
-      await axios.delete(`${API_BASE_URL}/api/scheduler/jobs/${jobId}`);
+      await axios.delete(`${apiBaseUrl}/api/scheduler/jobs/${jobId}`);
       showMessage('success', '작업이 삭제되었습니다.');
       fetchMonitoringData();
     } catch (error: any) {
@@ -280,7 +286,7 @@ export default function SchedulerPage() {
     setShowDetailModal(true);
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/scheduler/jobs/${jobId}/detail`);
+      const response = await axios.get(`${apiBaseUrl}/api/scheduler/jobs/${jobId}/detail`);
       setSelectedJobDetail(response.data);
     } catch (error: any) {
       showMessage('error', error.response?.data?.detail || '작업 상세 조회에 실패했습니다.');
