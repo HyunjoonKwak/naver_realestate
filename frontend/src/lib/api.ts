@@ -1,11 +1,11 @@
 import axios from 'axios';
 import type { Complex, Article, Transaction, ArticleChangeSummary, ArticleChangeList, TransactionSummary } from '@/types';
 
-// 브라우저에서는 상대 경로 사용 (현재 접속한 호스트의 API 사용)
+// 브라우저에서는 NEXT_PUBLIC_API_URL 사용 (개발: localhost:8000, 프로덕션: 상대경로)
 // SSR에서는 컨테이너 내부 API 사용
 const API_URL = typeof window === 'undefined'
   ? (process.env.NEXT_PUBLIC_API_URL || 'http://api:8000')  // SSR: 컨테이너 내부
-  : '';  // 브라우저: 상대 경로 (현재 호스트 사용)
+  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000');  // 브라우저: 환경변수 또는 localhost
 
 const api = axios.create({
   baseURL: API_URL,
