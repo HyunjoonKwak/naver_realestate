@@ -19,6 +19,8 @@ def migrate():
     print("✅ 마이그레이션 완료!")
     print("   - article_snapshots 테이블")
     print("   - article_changes 테이블")
+    print("   - users 테이블")
+    print("   - favorite_complexes 테이블")
 
 if __name__ == "__main__":
     migrate()

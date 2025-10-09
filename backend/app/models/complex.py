@@ -246,8 +246,46 @@ class CrawlJob(Base):
     def is_finished(self) -> bool:
         """작업 완료 여부"""
         return self.status in ['success', 'failed']
-    
-    @property
-    def is_running(self) -> bool:
-        """작업 실행 중 여부"""
-        return self.status == 'running'
+
+
+class User(Base):
+    """사용자 모델"""
+    __tablename__ = "users"
+
+    id = Column(BigInteger, primary_key=True, index=True)
+    email = Column(String(255), unique=True, index=True, nullable=False, comment="이메일 (로그인 ID)")
+    username = Column(String(100), nullable=False, comment="사용자명")
+    hashed_password = Column(String(255), nullable=False, comment="해시된 비밀번호")
+    is_active = Column(Boolean, default=True, comment="활성 여부")
+    is_admin = Column(Boolean, default=False, comment="관리자 여부")
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    favorites = relationship("FavoriteComplex", back_populates="user", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<User(id={self.id}, email={self.email})>"
+
+
+class FavoriteComplex(Base):
+    """관심 단지 모델"""
+    __tablename__ = "favorite_complexes"
+
+    id = Column(BigInteger, primary_key=True, index=True)
+    user_id = Column(BigInteger, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, comment="사용자 ID")
+    complex_id = Column(String(50), ForeignKey('complexes.complex_id', ondelete='CASCADE'), nullable=False, comment="단지 ID")
+
+    # 알림 설정
+    notify_price_change = Column(Boolean, default=True, comment="가격 변동 알림")
+    notify_new_article = Column(Boolean, default=True, comment="신규 매물 알림")
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("User", back_populates="favorites")
+    complex = relationship("Complex")
+
+    def __repr__(self):
+        return f"<FavoriteComplex(user_id={self.user_id}, complex_id={self.complex_id})>"
