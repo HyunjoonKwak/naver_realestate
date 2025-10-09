@@ -365,11 +365,13 @@ class BriefingService:
         started_at = crawl_stats.get('started_at', '')
         finished_at = crawl_stats.get('finished_at', '')
         if started_at and finished_at:
-            from datetime import datetime
-            start_dt = datetime.fromisoformat(started_at.replace('Z', '+00:00'))
-            finish_dt = datetime.fromisoformat(finished_at.replace('Z', '+00:00'))
-            lines.append(f"⏰ **시작**: {start_dt.strftime('%Y-%m-%d %H:%M:%S')}")
-            lines.append(f"⏰ **완료**: {finish_dt.strftime('%Y-%m-%d %H:%M:%S')}")
+            from datetime import datetime, timezone, timedelta as td
+            # UTC 시간을 한국 시간(KST, UTC+9)으로 변환
+            kst = timezone(td(hours=9))
+            start_dt = datetime.fromisoformat(started_at.replace('Z', '+00:00')).astimezone(kst)
+            finish_dt = datetime.fromisoformat(finished_at.replace('Z', '+00:00')).astimezone(kst)
+            lines.append(f"⏰ **시작**: {start_dt.strftime('%Y-%m-%d %H:%M:%S')} KST")
+            lines.append(f"⏰ **완료**: {finish_dt.strftime('%Y-%m-%d %H:%M:%S')} KST")
             duration = crawl_stats.get('duration_seconds', 0)
             lines.append(f"⏱️ **소요시간**: {duration}초 ({duration // 60}분 {duration % 60}초)")
             lines.append("")
