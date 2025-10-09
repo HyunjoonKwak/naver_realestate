@@ -1,0 +1,32 @@
+{
+  "example_daily_crawl": {
+    "task": "app.tasks.scheduler.crawl_all_complexes",
+    "schedule": {
+      "hour": 6,
+      "minute": 0,
+      "day_of_week": "*"
+    },
+    "enabled": true,
+    "description": "매일 오전 6시 전체 단지 크롤링"
+  },
+  "example_weekly_briefing": {
+    "task": "app.tasks.briefing_tasks.send_weekly_briefing",
+    "schedule": {
+      "hour": 9,
+      "minute": 0,
+      "day_of_week": 0
+    },
+    "enabled": true,
+    "description": "매주 월요일 오전 9시 주간 브리핑"
+  },
+  "example_cleanup": {
+    "task": "app.tasks.scheduler.cleanup_old_snapshots",
+    "schedule": {
+      "hour": 3,
+      "minute": 0,
+      "day_of_week": "*"
+    },
+    "enabled": true,
+    "description": "매일 새벽 3시 오래된 스냅샷 정리"
+  }
+}

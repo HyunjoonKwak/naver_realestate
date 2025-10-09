@@ -129,3 +129,6 @@ archive/
 
 # Claude Code settings (AI 개발 도구 로컬 설정)
 .claude/
+
+# Scheduler config (환경별로 다른 설정 - Git 추적 제외)
+backend/app/config/schedules.json
