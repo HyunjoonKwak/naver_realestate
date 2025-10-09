@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { complexAPI, articleAPI, scraperAPI, transactionAPI } from '@/lib/api';
 import type { ComplexDetail, ComplexStats, ArticleChangeSummary, ArticleChangeList } from '@/types';
+import PriceTrendChart from '@/components/PriceTrendChart';
 
 export default function ComplexDetailPage() {
   const params = useParams();
@@ -1039,6 +1040,9 @@ export default function ComplexDetailPage() {
                   </div>
                 </div>
               </div>
+
+              {/* 가격 추이 차트 */}
+              <PriceTrendChart complexId={complexId} months={6} />
 
               {/* 실거래가 목록 */}
               {transactions.length > 0 && (
