@@ -28,12 +28,23 @@
 - Beat 재시작 기능 추가로 수동 트러블슈팅 불필요
 - 중복 문서 제거 및 메인 문서 집중
 
+### AWS EC2 배포 관련 (Deprecated - 2025-10-10)
+- `DEPLOYMENT_GUIDE.md` - AWS EC2 배포 가이드
+- `FREE_TIER_DEPLOYMENT.md` - 무료/저비용 배포 가이드 (프리티어)
+
+**아카이브 사유**:
+- Playwright 크롤러가 `headless=False` 모드를 사용하여 봇 회피
+- GUI 환경 필요로 EC2 헤드리스 서버에서 복잡한 Xvfb 설정 필요
+- t2.micro (1GB RAM) 스펙으로는 메모리 부족 (OOM) 발생
+- 프로젝트 방향을 **로컬 Mac 개발 환경**에 집중하기로 결정
+
 ## 📚 최신 문서
 
 현재 프로젝트의 최신 문서는 다음을 참고하세요:
 
 - **[CLAUDE.md](../../CLAUDE.md)** - AI 어시스턴트를 위한 전체 프로젝트 가이드
 - **[README.md](../../README.md)** - 프로젝트 소개 및 빠른 시작
+- **[docs/LAPTOP_SETUP.md](../LAPTOP_SETUP.md)** - 맥북에서 개발 환경 설정 가이드
 - **[docs/DYNAMIC_SCHEDULING.md](../DYNAMIC_SCHEDULING.md)** - 스케줄러 기능 상세 가이드
 - **[docs/TRANSACTION_GUIDE.md](../TRANSACTION_GUIDE.md)** - 실거래가 기능 가이드
 - **[docs/DISCORD_BRIEFING_GUIDE.md](../DISCORD_BRIEFING_GUIDE.md)** - Discord 브리핑 설정
