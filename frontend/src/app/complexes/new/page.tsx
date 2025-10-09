@@ -4,9 +4,15 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
 export default function NewComplexPage() {
+  // API Base URL - 브라우저에서는 현재 호스트의 8000 포트 사용
+  const [apiBaseUrl] = useState(() => {
+    if (typeof window === 'undefined') {
+      return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    }
+    return process.env.NEXT_PUBLIC_API_URL || `http://${window.location.hostname}:8000`;
+  });
+
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [fetchingInfo, setFetchingInfo] = useState(false);
@@ -57,7 +63,7 @@ export default function NewComplexPage() {
     setError('단지 ID가 추출되었습니다. 추가 정보를 가져오는 중...');
 
     try {
-      const response = await axios.get(`${API_URL}/api/scraper/complex`, {
+      const response = await axios.get(`${apiBaseUrl}/api/scraper/complex`, {
         params: { url: naverUrl },
         timeout: 25000
       });
@@ -116,7 +122,7 @@ export default function NewComplexPage() {
       if (formData.latitude) payload.latitude = parseFloat(formData.latitude);
       if (formData.longitude) payload.longitude = parseFloat(formData.longitude);
 
-      const response = await axios.post(`${API_URL}/api/complexes/`, payload);
+      const response = await axios.post(`${apiBaseUrl}/api/complexes/`, payload);
 
       // 단지 추가 성공 후 백그라운드 크롤링 시작
       const message = collectAddress
@@ -125,7 +131,7 @@ export default function NewComplexPage() {
       setError(message);
 
       // 백그라운드 크롤링 시작 (응답을 기다리지 않음)
-      axios.post(`${API_URL}/api/scraper/crawl`, {
+      axios.post(`${apiBaseUrl}/api/scraper/crawl`, {
         complex_id: response.data.complex_id,
         collect_address: collectAddress
       }).catch(err => {
