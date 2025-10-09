@@ -242,6 +242,22 @@ export default function SchedulerPage() {
     setTimeout(() => setMessage(null), 5000);
   };
 
+  const restartBeat = async () => {
+    if (!confirm('Celery Beat를 재시작하시겠습니까?\n\n기존 프로세스를 종료하고 새로운 프로세스를 시작합니다.')) return;
+
+    try {
+      const response = await axios.post(`${apiBaseUrl}/api/scheduler/beat/restart`);
+      showMessage('success', response.data.message || '✅ Celery Beat가 재시작되었습니다!');
+
+      // 5초 후 상태 갱신
+      setTimeout(() => {
+        if (activeTab === 'schedule') loadStatus();
+      }, 5000);
+    } catch (error: any) {
+      showMessage('error', error.response?.data?.detail || 'Beat 재시작에 실패했습니다.');
+    }
+  };
+
   const triggerAllCrawling = async () => {
     if (!confirm('전체 단지 크롤링을 시작하시겠습니까?')) return;
 
@@ -546,7 +562,7 @@ export default function SchedulerPage() {
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-2">
               <div>
                 <p className="text-sm text-gray-600">Celery Beat</p>
                 <p className="text-2xl font-bold mt-1">
@@ -564,6 +580,14 @@ export default function SchedulerPage() {
               </div>
               <div className={`w-4 h-4 rounded-full ${workerStatus?.beat?.active ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
             </div>
+            {!workerStatus?.beat?.active && (
+              <button
+                onClick={restartBeat}
+                className="w-full mt-3 px-3 py-1.5 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+              >
+                🔄 재활성화
+              </button>
+            )}
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">

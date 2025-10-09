@@ -226,6 +226,75 @@ def get_scheduler_status():
         }
 
 
+@router.post("/beat/restart", response_model=Dict[str, Any])
+def restart_beat():
+    """
+    Celery Beat 재시작 (자동)
+
+    Beat가 죽었을 때:
+    1. Redis 락 제거
+    2. 기존 Beat 프로세스 종료 (있다면)
+    3. 새로운 Beat 프로세스 시작
+
+    Returns:
+        재시작 결과
+    """
+    try:
+        import redis
+        import subprocess
+        import signal
+        import psutil
+        import os
+
+        r = redis.from_url(celery_app.conf.redbeat_redis_url)
+        lock_key = "redbeat::lock"
+
+        # 1. 현재 락 상태 확인
+        current_ttl = r.ttl(lock_key)
+
+        # 2. 락 제거
+        deleted = r.delete(lock_key)
+
+        # 3. 기존 Beat 프로세스 종료
+        killed_processes = []
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                cmdline = proc.info.get('cmdline')
+                if cmdline and any('celery' in str(cmd) and 'beat' in str(cmd) for cmd in cmdline):
+                    proc.terminate()  # SIGTERM
+                    killed_processes.append(proc.info['pid'])
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+
+        # 4. 새로운 Beat 프로세스 시작
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        beat_script = os.path.join(project_root, 'run_celery_beat.sh')
+
+        if os.path.exists(beat_script):
+            # 백그라운드에서 Beat 시작
+            subprocess.Popen(
+                ['bash', beat_script],
+                cwd=project_root,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True
+            )
+            beat_started = True
+        else:
+            beat_started = False
+
+        return {
+            "message": "✅ Celery Beat가 재시작되었습니다!",
+            "previous_ttl": current_ttl if current_ttl > 0 else None,
+            "lock_removed": deleted > 0,
+            "killed_processes": killed_processes,
+            "beat_restarted": beat_started,
+            "note": "5초 후 상태를 확인해주세요." if beat_started else "Beat 스크립트를 찾을 수 없습니다."
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Beat 재시작 실패: {str(e)}")
+
+
 @router.post("/schedule", response_model=Dict[str, Any])
 def create_schedule(schedule: ScheduleCreate):
     """

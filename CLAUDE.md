@@ -28,8 +28,11 @@ backend/.venv/bin/playwright install chromium
 cd frontend && npm install
 ```
 
-### Development (로컬)
+### Development
 ```bash
+# Start Docker containers (PostgreSQL on port 5433, Redis on port 6380)
+docker-compose up -d
+
 # Start API server (from project root)
 cd backend
 .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -48,36 +51,9 @@ npm run dev
 
 # API documentation
 open http://localhost:8000/docs
-```
 
-### Production (NAS 운영)
-```bash
-# .env 파일 설정 (필수!)
-cat > backend/.env << 'EOF'
-DATABASE_URL=postgresql://postgres:postgres@postgres:5432/naver_realestate
-REDIS_HOST=redis
-REDIS_PORT=6379
-MOLIT_API_KEY=your_api_key
-DISCORD_WEBHOOK_URL=your_webhook_url
-EOF
-
-# 모든 서비스 시작 (Docker Compose)
-docker-compose up -d --build
-
-# 데이터베이스 마이그레이션
-docker-compose exec api python migrate_db.py
-
-# 상태 확인
-docker-compose ps
-docker-compose logs -f celery_beat
-
-# Beat Lock 확인 (양수면 정상 작동 중)
-docker-compose exec redis redis-cli TTL "redbeat::lock"
-
-# 서비스 재시작
-docker-compose restart celery_beat
-
-# 자세한 내용은 NAS_DEPLOYMENT.md 참고
+# Scheduler management (브라우저에서 Beat 재시작 가능)
+open http://localhost:3000/scheduler
 ```
 
 ### Testing
@@ -119,6 +95,7 @@ docker-compose restart celery_beat
   - DELETE /api/scheduler/schedule/{name} - Delete schedule
   - GET /api/scheduler/jobs - View crawl job history
   - GET /api/scheduler/stats - View crawling statistics
+  - POST /api/scheduler/beat/restart - Restart Celery Beat (auto-restart dead Beat process)
 
 **Schemas:** [backend/app/schemas/](backend/app/schemas/) - Pydantic models for request/response validation
 
@@ -153,9 +130,13 @@ docker-compose restart celery_beat
 **Pages:** [frontend/src/app/](frontend/src/app/)
 - `page.tsx` - Dashboard with complex grid and stats
 - `complexes/page.tsx` - Complex list page
-- `complexes/[id]/page.tsx` - Complex detail with articles table, filters, price cards
+- `complexes/[id]/page.tsx` - Complex detail with:
+  - Article list table (면적=공급면적/area2, 평형=전용면적/area1을 평으로 환산)
+  - 면적별 가격 정보 카드 (전용/공급면적/평형 모두 표시)
+  - 실거래가 정보
+  - 변동사항 요약
 - `complexes/new/page.tsx` - Add new complex by Naver URL
-- `scheduler/page.tsx` - Scheduler management (view/create/edit/delete schedules, job history)
+- `scheduler/page.tsx` - Scheduler management (view/create/edit/delete schedules, job history, Beat restart)
 
 **API Client:** [frontend/src/lib/api.ts](frontend/src/lib/api.ts) - Axios-based client for backend API calls
 
@@ -211,6 +192,13 @@ docker-compose restart celery_beat
 **Real Transaction Integration:** Refresh endpoint automatically fetches MOLIT data after crawling. See Real Transaction section below.
 
 **Scheduled Crawling & Discord Briefing:** Uses Celery + RedBeat for dynamic scheduling. Schedules stored in Redis (editable via API without restart) and JSON file ([backend/app/config/schedules.json](backend/app/config/schedules.json)) for persistence. Weekly briefing automatically sent to Discord after scheduled crawls.
+
+**Celery Beat Auto-Restart:**
+- RedBeat lock timeout: 12 hours (43,200 seconds) in [backend/app/core/celery_app.py:64](backend/app/core/celery_app.py#L64)
+- If Mac sleeps > 12 hours, Beat may die with `LockNotOwnedError`
+- Frontend provides "🔄 재활성화" button on Scheduler page when Beat is inactive
+- Button calls POST /api/scheduler/beat/restart to automatically restart Beat process
+- No terminal access needed - fully automated restart from browser
 
 ## Real Transaction (실거래가) Feature
 
@@ -324,65 +312,41 @@ curl http://localhost:8000/api/scheduler/jobs
 curl http://localhost:8000/api/scheduler/schedule
 ```
 
-## Known Limitations
+## Known Limitations & Requirements
 
-- No user authentication system yet (planned)
-- Crawling requires headless=False to avoid bot detection
-  - **Solution**: Use official Playwright Docker image (`mcr.microsoft.com/playwright/python`) - already configured in Dockerfile
-- MOLIT API has rate limits (1,000 calls/day for general key)
-- Discord briefing only supports webhook (no bidirectional interaction)
-- RedBeat scheduler requires Redis
-  - Schedules are stored in Redis (`redbeat:*` keys) and backed up to `backend/app/config/schedules.json`
-  - If Redis data is lost, schedules are restored from JSON on next Beat startup
+- **No user authentication** system yet (planned)
+- **Crawling requires headless=False** to avoid Naver bot detection
+  - ⚠️ Requires X server (GUI environment) to run
+  - Mac/Linux desktop: ✅ Works natively
+  - Headless servers (NAS/EC2): ❌ Requires Xvfb (virtual display) - complex setup
+  - **Current limitation**: Project designed for local development on Mac
+- **MOLIT API rate limits**: 1,000 calls/day for general key
+- **Discord briefing**: Webhook only (no bidirectional interaction)
+- **RedBeat scheduler**: Requires Redis
+  - Schedules stored in Redis (`redbeat:*` keys) + backup in `backend/app/config/schedules.json`
+  - If Redis data is lost, schedules restored from JSON on next Beat startup
+- **Mac sleep mode**: If Mac sleeps > 12 hours, Beat may die (use "🔄 재활성화" button to restart)
 
-## Deployment & Operations
+## Dependencies & Requirements
 
-### Development vs Production
+### Python Dependencies
+- Main: `backend/requirements.txt`
+- Key packages: FastAPI, SQLAlchemy, Celery, RedBeat, Playwright, psutil
+- Playwright browsers: Run `playwright install chromium` after pip install
 
-| Component | Development (로컬) | Production (NAS) |
-|-----------|-------------------|------------------|
-| **FastAPI** | `.venv/bin/uvicorn` (manual) | Docker container (auto-restart) |
-| **Celery Worker** | `./run_celery_worker.sh` | Docker container (auto-restart) |
-| **Celery Beat** | `./run_celery_beat.sh` | Docker container (auto-restart) |
-| **PostgreSQL** | Docker (port 5433) | Docker (port 5433) |
-| **Redis** | Docker (port 6379) | Docker (port 6379) |
-| **Frontend** | `npm run dev` (port 3000) | Docker container (port 3000) |
-| **Auto-restart** | ❌ Manual management | ✅ Docker `restart: unless-stopped` |
-| **Environment** | `.env` + `.venv` | `.env` + Docker images |
-
-### NAS Deployment
-
-The project is production-ready with Docker Compose:
-- All services containerized with health checks
-- `restart: unless-stopped` for automatic recovery
-- Celery Beat auto-restarts if crashed (Docker manages it)
-- RedBeat Lock (TTL 1800s) prevents duplicate Beat instances
-- See **[NAS_DEPLOYMENT.md](NAS_DEPLOYMENT.md)** for detailed guide
-
-### Celery Beat Auto-Recovery
-
-**Q: How does Celery Beat restart automatically?**
-
-A: In production (NAS), Docker's `restart: unless-stopped` policy automatically restarts the Beat container if it crashes. The RedBeat Lock (Redis key with 30-min TTL) is used to:
-1. Prevent multiple Beat instances from running simultaneously
-2. Allow other Beat instances to take over if one dies (in distributed setup)
-3. Verify Beat is alive (check `docker-compose exec redis redis-cli TTL "redbeat::lock"`)
-
-If Lock TTL is `-2`, Beat is dead and needs restart:
-```bash
-docker-compose restart celery_beat
-```
+### System Requirements
+- **Mac/Linux** with GUI (X server)
+- **Docker** for PostgreSQL (port 5433) and Redis (port 6380)
+- **Node.js 18+** for Next.js frontend
+- **Python 3.13** with pip and venv
 
 ### Environment Variables
-
-Beat and Worker read `.env` file through celery_app.py startup code:
-```python
-# backend/app/core/celery_app.py lines 9-17
-env_path = Path(__file__).parent.parent.parent / '.env'
-if env_path.exists():
-    with open(env_path) as f:
-        for line in f:
-            # Parse and set environment variables
+Required in `backend/.env`:
+```bash
+DATABASE_URL=postgresql://postgres:postgres@localhost:5433/naver_realestate
+REDIS_URL=redis://localhost:6380/0
+MOLIT_API_KEY=your_api_key_here
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
 ```
 
-This ensures `DISCORD_WEBHOOK_URL` and `MOLIT_API_KEY` are available in background tasks.
+Beat and Worker read `.env` via celery_app.py startup code (lines 9-17).

@@ -439,21 +439,56 @@ export default function ComplexDetailPage() {
       {activeTab === 'articles' && (<>
       {/* 면적별 가격 정보 */}
       {complex.articles && complex.articles.length > 0 && (() => {
+        // 가격을 만원 단위로 변환하는 함수
+        const parsePrice = (priceStr: string): number => {
+          if (!priceStr) return 0;
+
+          // "6억 5,000" 형식 파싱
+          const eokMatch = priceStr.match(/(\d+)억/);
+          // 억 뒤에 공백 이후의 숫자만 매칭 (억 앞의 숫자는 제외)
+          const manMatch = priceStr.match(/억\s+(\d{1,3}(?:,\d{3})*)/);
+          // 억이 없고 숫자만 있는 경우 (전세 "5,000" 같은 경우)
+          const onlyManMatch = !eokMatch && priceStr.match(/^(\d{1,3}(?:,\d{3})*)$/);
+
+          let totalMan = 0;
+
+          if (eokMatch) {
+            // 억 단위가 있으면 만원으로 변환 (1억 = 10,000만)
+            totalMan += parseInt(eokMatch[1]) * 10000;
+          }
+
+          if (manMatch) {
+            // 억 뒤의 만원 단위 추가
+            const manValue = parseInt(manMatch[1].replace(/,/g, ''));
+            totalMan += manValue;
+          } else if (onlyManMatch) {
+            // 억이 없고 만원 단위만 있는 경우
+            const manValue = parseInt(onlyManMatch[1].replace(/,/g, ''));
+            totalMan += manValue;
+          }
+
+          return totalMan;
+        };
+
         // 면적별 가격 통계 계산
-        const areaPriceMap = new Map<string, { sale: number[], lease: number[] }>();
+        const areaPriceMap = new Map<string, { sale: number[], lease: number[], area1?: number, area2?: number }>();
 
         complex.articles.forEach(article => {
           if (!article.area_name || !article.price) return;
 
           if (!areaPriceMap.has(article.area_name)) {
-            areaPriceMap.set(article.area_name, { sale: [], lease: [] });
+            areaPriceMap.set(article.area_name, {
+              sale: [],
+              lease: [],
+              area1: article.area1,
+              area2: article.area2
+            });
           }
 
           const priceData = areaPriceMap.get(article.area_name)!;
-          const priceStr = article.price.replace(/[^0-9]/g, '');
-          const price = parseInt(priceStr);
+          const price = parsePrice(article.price);
 
-          if (!isNaN(price)) {
+          if (price > 0) {
             if (article.trade_type === '매매') {
               priceData.sale.push(price);
             } else if (article.trade_type === '전세') {
@@ -475,9 +510,33 @@ export default function ComplexDetailPage() {
                 {sortedAreas.map(areaName => {
                   const priceData = areaPriceMap.get(areaName)!;
 
+                  // 면적 표시 형식 (전용면적/공급면적/평형)
+                  let displayName = areaName;
+                  const pyeong = priceData.area1 ? (priceData.area1 / 3.3058).toFixed(1) : null;
+
+                  if (/^\d+$/.test(areaName)) {
+                    // 숫자만 있으면 "㎡" 추가하고 area2, 평형 표시
+                    displayName = `${areaName}㎡`;
+                    if (priceData.area2) {
+                      displayName += ` (${priceData.area2}㎡)`;
+                    }
+                    if (pyeong) {
+                      displayName += ` ${pyeong}평`;
+                    }
+                  } else {
+                    // 알파벳 포함 (116A 등)
+                    if (priceData.area1 && priceData.area2) {
+                      displayName = `${areaName} (${priceData.area1}/${priceData.area2}㎡`;
+                      if (pyeong) {
+                        displayName += ` ${pyeong}평`;
+                      }
+                      displayName += ')';
+                    }
+                  }
+
                   return (
                     <div key={areaName} className="border rounded-lg p-4">
-                      <div className="text-lg font-semibold text-gray-900 mb-3">{areaName}</div>
+                      <div className="text-lg font-semibold text-gray-900 mb-3">{displayName}</div>
 
                       <div className="grid grid-cols-2 gap-4">
                         {/* 매매 */}
@@ -893,8 +952,8 @@ export default function ComplexDetailPage() {
                         <span>{article.price}</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{article.area1}㎡</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{article.area_name}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{article.area2}㎡</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{article.area1 ? (article.area1 / 3.3058).toFixed(1) : '-'}평</td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{article.building_name}</td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{article.floor_info}</td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{article.direction}</td>

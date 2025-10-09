@@ -60,5 +60,5 @@ except Exception as e:
 celery_app.conf.beat_scheduler = "redbeat.RedBeatScheduler"
 celery_app.conf.redbeat_redis_url = REDIS_URL
 celery_app.conf.redbeat_key_prefix = "redbeat:"
-# Lock timeout을 30분으로 증가 (크롤링 작업이 길어질 수 있음)
-celery_app.conf.redbeat_lock_timeout = 1800  # 30분 (기존: 300초 = 5분)
+# Lock timeout을 12시간으로 증가 (Mac 잠자기 대응)
+celery_app.conf.redbeat_lock_timeout = 43200  # 12시간 (43200초)
