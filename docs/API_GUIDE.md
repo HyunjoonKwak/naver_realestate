@@ -18,25 +18,58 @@ venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 ## 📚 API 엔드포인트 목록
 
-### 단지 API (6개)
-- `GET /complexes/` - 단지 목록 조회
-- `GET /complexes/{complex_id}` - 단지 상세 정보
-- `GET /complexes/{complex_id}/articles` - 단지 매물 목록
-- `GET /complexes/{complex_id}/transactions` - 단지 실거래가 목록
-- `GET /complexes/{complex_id}/stats` - 단지 통계
+### 단지 API
+- `GET /api/complexes/` - 단지 목록 조회
+- `POST /api/complexes/` - 단지 추가
+- `GET /api/complexes/{complex_id}` - 단지 상세 정보
+- `DELETE /api/complexes/{complex_id}` - 단지 삭제
+- `GET /api/complexes/{complex_id}/stats` - 단지 통계
 
-### 매물 API (5개)
-- `GET /articles/` - 매물 검색
-- `GET /articles/{article_no}` - 매물 상세 정보
-- `GET /articles/recent/all` - 최근 매물
-- `GET /articles/price-changed/all` - 가격 변동 매물
+### 매물 API
+- `GET /api/articles/` - 매물 검색
+- `GET /api/articles/{article_no}` - 매물 상세 정보
+- `GET /api/articles/changes/{complex_id}/summary` - 변동사항 요약
+- `GET /api/articles/changes/{complex_id}/list` - 변동사항 목록
+- `GET /api/articles/changes/weekly-summary` - 주간 변동사항 요약
 
-### 실거래가 API (5개)
-- `GET /transactions/` - 실거래가 검색
-- `GET /transactions/recent` - 최근 실거래가
-- `GET /transactions/stats/price-trend` - 가격 추이 통계
-- `GET /transactions/stats/area-price` - 면적별 가격 통계
-- `GET /transactions/stats/floor-premium` - 층별 프리미엄 분석
+### 실거래가 API
+- `GET /api/transactions/` - 실거래가 검색
+- `GET /api/transactions/stats/overview` - 전체 통계 개요
+- `GET /api/transactions/stats/price-trend` - 가격 추이 통계
+- `GET /api/transactions/stats/area-summary/{complex_id}` - 평형별 실거래가 요약
+- `POST /api/transactions/fetch/{complex_id}` - 실거래가 수동 조회
+
+### 크롤링 API
+- `POST /api/scraper/crawl` - 단지 크롤링 (body)
+- `POST /api/scraper/crawl/{complex_id}` - 단지 크롤링 (path)
+- `POST /api/scraper/refresh/{complex_id}` - 크롤링 + 실거래가 자동 조회
+
+### 스케줄러 API
+- `GET /api/scheduler/schedule` - 스케줄 목록
+- `POST /api/scheduler/schedule` - 스케줄 생성
+- `PUT /api/scheduler/schedule/{schedule_key}` - 스케줄 수정
+- `DELETE /api/scheduler/schedule/{schedule_key}` - 스케줄 삭제
+- `GET /api/scheduler/status` - Worker & Beat 상태
+- `GET /api/scheduler/jobs` - 작업 이력
+- `GET /api/scheduler/stats` - 통계
+- `POST /api/scheduler/beat/restart` - Celery Beat 재시작
+
+### 브리핑 API
+- `POST /api/briefing/send-manual` - 수동 브리핑 전송
+- `GET /api/briefing/preview` - 브리핑 미리보기
+
+### 인증 API (NEW - 2025-10-10)
+- `POST /api/auth/register` - 회원가입
+- `POST /api/auth/login` - 로그인
+- `GET /api/auth/me` - 현재 사용자 정보
+- `PUT /api/auth/me` - 사용자 정보 수정
+
+### 관심단지 API (NEW - 2025-10-10)
+- `GET /api/favorites` - 내 관심 단지 목록
+- `POST /api/favorites` - 관심 단지 추가
+- `DELETE /api/favorites/{complex_id}` - 관심 단지 제거
+- `PUT /api/favorites/{complex_id}` - 알림 설정 변경
+- `GET /api/favorites/check/{complex_id}` - 관심 단지 여부 확인
 
 ---
 
@@ -363,7 +396,96 @@ export const complexAPI = {
 ## 📝 다음 단계
 
 1. ✅ 프론트엔드 통합 완료
-2. ⬜ 캐싱 (Redis)
-3. ⬜ Rate Limiting
-4. ⬜ 인증/인가 (JWT)
-5. ⬜ 로깅 및 모니터링
+2. ✅ 인증/인가 (JWT) - 백엔드 완료
+3. ⬜ 프론트엔드 인증 UI
+4. ⬜ 캐싱 (Redis)
+5. ⬜ Rate Limiting
+6. ⬜ 로깅 및 모니터링
+
+---
+
+## 🔐 인증 API 사용 예시
+
+### 회원가입
+```bash
+curl -X POST "http://localhost:8000/api/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "username": "홍길동",
+    "password": "password123"
+  }'
+```
+
+### 로그인
+```bash
+curl -X POST "http://localhost:8000/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "password123"
+  }'
+```
+
+**응답:**
+```json
+{
+  "access_token": "eyJhbGc...",
+  "token_type": "bearer",
+  "user": {
+    "id": 1,
+    "email": "user@example.com",
+    "username": "홍길동",
+    "is_active": true,
+    "is_admin": false
+  }
+}
+```
+
+### 인증이 필요한 API 호출
+```bash
+curl "http://localhost:8000/api/favorites" \
+  -H "Authorization: Bearer eyJhbGc..."
+```
+
+---
+
+## 📊 주요 API 상세
+
+### 스케줄러 관리
+
+**스케줄 생성:**
+```bash
+curl -X POST "http://localhost:8000/api/scheduler/schedule" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "schedule_key": "daily_crawl",
+    "task_name": "crawl_all_complexes",
+    "cron_expression": "0 9 * * *",
+    "description": "매일 오전 9시 전체 크롤링"
+  }'
+```
+
+**Beat 재시작 (Mac 슬립 복구):**
+```bash
+curl -X POST "http://localhost:8000/api/scheduler/beat/restart"
+```
+
+### 실거래가 수집
+
+**특정 단지 실거래가 조회:**
+```bash
+curl -X POST "http://localhost:8000/api/transactions/fetch/109208"
+```
+
+**평형별 요약:**
+```bash
+curl "http://localhost:8000/api/transactions/stats/area-summary/109208?months=6"
+```
+
+### 주간 브리핑
+
+**Discord로 브리핑 전송:**
+```bash
+curl -X POST "http://localhost:8000/api/briefing/send-manual"
+```
