@@ -125,7 +125,7 @@ backend/*.png
 # - test_api.sh (API 테스트 스크립트)
 
 # Archive folder (개발 중 생성된 테스트 파일 보관소)
-archive/
+# archive/  # docs/archive는 커밋에 포함
 
 # Claude Code settings (AI 개발 도구 로컬 설정)
 .claude/
