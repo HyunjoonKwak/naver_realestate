@@ -133,7 +133,25 @@ cd backend
 ### python-dotenv 모듈 에러
 → `cd backend && .venv/bin/pip install python-dotenv`
 
+## 🧪 테스트
+
+테스트 스크립트들이 `tests/` 디렉토리에 정리되어 있습니다:
+
+```bash
+# 기본 API 테스트
+./tests/test_api.sh
+
+# 실거래가 API 테스트
+./tests/test_transaction_api.sh
+
+# Discord 브리핑 테스트
+./tests/test_discord_briefing.sh
+```
+
+자세한 내용은 [tests/README.md](tests/README.md)를 참고하세요.
+
 ## 📚 추가 문서
 
 - [PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) - 프로젝트 구조
 - [CLAUDE.md](CLAUDE.md) - AI 개발 가이드
+- [tests/README.md](tests/README.md) - 테스트 가이드
