@@ -125,7 +125,7 @@ monitoring_menu() {
     
     case $choice in
         1) echo ""; ./scripts/check_schedules.sh; echo ""; read -p "엔터..."; monitoring_menu ;;
-        2) ./logs_all.sh ;;
+        2) ./scripts/logs_all.sh ;;
         3) echo ""; docker ps; echo ""; read -p "엔터..."; monitoring_menu ;;
         4) echo ""; ps aux | grep -E "uvicorn|celery|next" | grep -v grep; echo ""; read -p "엔터..."; monitoring_menu ;;
         5) open http://localhost:3000 2>/dev/null; open http://localhost:8000/docs 2>/dev/null; monitoring_menu ;;
@@ -148,10 +148,10 @@ service_menu() {
     echo ""
     printf "선택 ➤ "
     read choice
-    
+
     case $choice in
-        1) echo ""; ./start_all.sh; echo ""; read -p "엔터..."; service_menu ;;
-        2) echo ""; ./stop_all.sh; echo ""; read -p "엔터..."; service_menu ;;
+        1) echo ""; ./scripts/start_all.sh; echo ""; read -p "엔터..."; service_menu ;;
+        2) echo ""; ./scripts/stop_all.sh; echo ""; read -p "엔터..."; service_menu ;;
         3) echo ""; docker-compose up -d; echo ""; read -p "엔터..."; service_menu ;;
         4) echo ""; docker-compose down; echo ""; read -p "엔터..."; service_menu ;;
         5) individual_menu ;;
