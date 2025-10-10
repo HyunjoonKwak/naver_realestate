@@ -16,10 +16,10 @@ Korean real estate tracking system that crawls Naver Real Estate for apartment c
 docker-compose up -d
 
 # Migrate database with foreign keys (recommended - Phase 1 improvement)
-backend/.venv/bin/python migrate_db.py
+backend/.venv/bin/python scripts/migrate_db.py
 
 # Legacy: Initialize/reset database tables (no foreign keys)
-backend/.venv/bin/python reset_db.py
+backend/.venv/bin/python scripts/reset_db.py
 
 # Install Playwright browsers (first time only)
 backend/.venv/bin/playwright install chromium
@@ -58,8 +58,22 @@ open http://localhost:3000/scheduler
 
 ### Testing
 ```bash
-# Test API endpoints
-./test_api.sh
+# Test API endpoints (see tests/README.md for all test scripts)
+./tests/test_api.sh
+```
+
+### Utility Scripts
+```bash
+# Database migration (add foreign keys)
+backend/.venv/bin/python scripts/migrate_db.py
+
+# Database reset (WARNING: deletes all data)
+backend/.venv/bin/python scripts/reset_db.py
+
+# Check database contents
+backend/.venv/bin/python scripts/check_data.py
+
+# See scripts/README.md for detailed documentation
 ```
 
 ## Architecture
