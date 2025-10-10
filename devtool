@@ -1,0 +1,219 @@
+#!/bin/bash
+
+# DevTool - Naver Real Estate 개발 도구 통합 관리
+
+PROJECT_ROOT="/Users/specialrisk_mac/code_work/naver_realestate"
+cd "$PROJECT_ROOT"
+
+print_header() {
+    clear
+    echo "╔════════════════════════════════════════════════════════╗"
+    echo "║                                                        ║"
+    echo "║       🛠️  Naver Real Estate DevTool                     ║"
+    echo "║          통합 개발 도구 & 모니터링                     ║"
+    echo "║                                                        ║"
+    echo "╚════════════════════════════════════════════════════════╝"
+    echo ""
+}
+
+check_status() {
+    echo "📊 시스템 상태"
+    echo "════════════════════════════════════════════════════════"
+    echo ""
+    
+    docker ps 2>/dev/null | grep -q "postgres" && echo "  ✅ PostgreSQL (포트 5433)" || echo "  ❌ PostgreSQL"
+    docker ps 2>/dev/null | grep -q "redis" && echo "  ✅ Redis (포트 6380)" || echo "  ❌ Redis"
+    curl -s http://localhost:8000/health > /dev/null 2>&1 && echo "  ✅ Backend API (포트 8000)" || echo "  ⚠️  Backend API"
+    curl -s http://localhost:3000 > /dev/null 2>&1 && echo "  ✅ Frontend (포트 3000)" || echo "  ⚠️  Frontend"
+    pgrep -f "celery.*worker" > /dev/null 2>&1 && echo "  ✅ Celery Worker" || echo "  ⚠️  Celery Worker"
+    pgrep -f "celery.*beat" > /dev/null 2>&1 && echo "  ✅ Celery Beat" || echo "  ⚠️  Celery Beat"
+    
+    echo ""
+}
+
+show_main_menu() {
+    print_header
+    check_status
+    
+    echo "📋 메인 메뉴"
+    echo "════════════════════════════════════════════════════════"
+    echo ""
+    echo "  [1] 🗄️  데이터베이스 관리"
+    echo "  [2] 🧪 테스트 실행"
+    echo "  [3] 📊 모니터링 & 상태"
+    echo "  [4] 🚀 서비스 관리"
+    echo "  [5] 📚 문서 보기"
+    echo ""
+    echo "  [0] 🚪 종료"
+    echo ""
+    printf "선택 ➤ "
+    read choice
+    
+    case $choice in
+        1) database_menu ;;
+        2) test_menu ;;
+        3) monitoring_menu ;;
+        4) service_menu ;;
+        5) docs_menu ;;
+        0) echo ""; echo "👋 DevTool을 종료합니다."; echo ""; exit 0 ;;
+        *) echo "❌ 잘못된 선택"; sleep 1; show_main_menu ;;
+    esac
+}
+
+database_menu() {
+    print_header
+    echo "🗄️  데이터베이스 관리"
+    echo "════════════════════════════════════════════════════════"
+    echo ""
+    echo "  [1] 📊 내용 확인"
+    echo "  [2] 🔄 마이그레이션"
+    echo "  [3] 🗑️  초기화 [위험]"
+    echo "  [4] 🐘 PostgreSQL 접속"
+    echo "  [0] ⬅️  뒤로"
+    echo ""
+    printf "선택 ➤ "
+    read choice
+    
+    case $choice in
+        1) echo ""; backend/.venv/bin/python scripts/check_data.py; echo ""; read -p "엔터..."; database_menu ;;
+        2) echo ""; printf "계속? (y/N) "; read c; [[ "$c" == "y" ]] && backend/.venv/bin/python scripts/migrate_db.py; echo ""; read -p "엔터..."; database_menu ;;
+        3) echo ""; printf "yes 입력: "; read c; [[ "$c" == "yes" ]] && backend/.venv/bin/python scripts/reset_db.py; echo ""; read -p "엔터..."; database_menu ;;
+        4) echo ""; docker exec -it naver_realestate-postgres-1 psql -U postgres -d naver_realestate; echo ""; read -p "엔터..."; database_menu ;;
+        0) show_main_menu ;;
+        *) echo "❌ 잘못된 선택"; sleep 1; database_menu ;;
+    esac
+}
+
+test_menu() {
+    print_header
+    echo "🧪 테스트"
+    echo "════════════════════════════════════════════════════════"
+    echo ""
+    echo "  [1] 🌐 API 테스트"
+    echo "  [2] 💰 실거래가 테스트"
+    echo "  [3] 💬 Discord 테스트"
+    echo "  [4] 🔄 전체 테스트"
+    echo "  [0] ⬅️  뒤로"
+    echo ""
+    printf "선택 ➤ "
+    read choice
+    
+    case $choice in
+        1) echo ""; ./tests/test_api.sh; echo ""; read -p "엔터..."; test_menu ;;
+        2) echo ""; ./tests/test_transaction_api.sh; echo ""; read -p "엔터..."; test_menu ;;
+        3) echo ""; ./tests/test_discord_briefing.sh; echo ""; read -p "엔터..."; test_menu ;;
+        4) echo ""; ./tests/test_api.sh; ./tests/test_transaction_api.sh; ./tests/test_discord_briefing.sh; echo "✅ 완료"; echo ""; read -p "엔터..."; test_menu ;;
+        0) show_main_menu ;;
+        *) echo "❌ 잘못된 선택"; sleep 1; test_menu ;;
+    esac
+}
+
+monitoring_menu() {
+    print_header
+    echo "📊 모니터링"
+    echo "════════════════════════════════════════════════════════"
+    echo ""
+    echo "  [1] 📅 스케줄 상태"
+    echo "  [2] 📜 로그 보기"
+    echo "  [3] 🐳 Docker 상태"
+    echo "  [4] 🔍 프로세스 상태"
+    echo "  [5] 🌐 웹 UI 열기"
+    echo "  [0] ⬅️  뒤로"
+    echo ""
+    printf "선택 ➤ "
+    read choice
+    
+    case $choice in
+        1) echo ""; ./scripts/check_schedules.sh; echo ""; read -p "엔터..."; monitoring_menu ;;
+        2) ./logs_all.sh ;;
+        3) echo ""; docker ps; echo ""; read -p "엔터..."; monitoring_menu ;;
+        4) echo ""; ps aux | grep -E "uvicorn|celery|next" | grep -v grep; echo ""; read -p "엔터..."; monitoring_menu ;;
+        5) open http://localhost:3000 2>/dev/null; open http://localhost:8000/docs 2>/dev/null; monitoring_menu ;;
+        0) show_main_menu ;;
+        *) echo "❌ 잘못된 선택"; sleep 1; monitoring_menu ;;
+    esac
+}
+
+service_menu() {
+    print_header
+    echo "🚀 서비스 관리"
+    echo "════════════════════════════════════════════════════════"
+    echo ""
+    echo "  [1] 🟢 전체 시작"
+    echo "  [2] 🔴 전체 중지"
+    echo "  [3] 🔄 Docker 시작"
+    echo "  [4] 🛑 Docker 중지"
+    echo "  [5] 🔧 개별 관리"
+    echo "  [0] ⬅️  뒤로"
+    echo ""
+    printf "선택 ➤ "
+    read choice
+    
+    case $choice in
+        1) echo ""; ./start_all.sh; echo ""; read -p "엔터..."; service_menu ;;
+        2) echo ""; ./stop_all.sh; echo ""; read -p "엔터..."; service_menu ;;
+        3) echo ""; docker-compose up -d; echo ""; read -p "엔터..."; service_menu ;;
+        4) echo ""; docker-compose down; echo ""; read -p "엔터..."; service_menu ;;
+        5) individual_menu ;;
+        0) show_main_menu ;;
+        *) echo "❌ 잘못된 선택"; sleep 1; service_menu ;;
+    esac
+}
+
+individual_menu() {
+    print_header
+    echo "🔧 개별 서비스"
+    echo "════════════════════════════════════════════════════════"
+    echo ""
+    echo "  시작: [1]Backend [2]Worker [3]Beat [4]Frontend"
+    echo "  중지: [5]Backend [6]Worker [7]Beat [8]Frontend"
+    echo "  [0] ⬅️  뒤로"
+    echo ""
+    printf "선택 ➤ "
+    read choice
+    
+    case $choice in
+        1) cd backend && nohup .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload > ../logs/backend.log 2>&1 & echo "✅ Backend 시작"; sleep 2; individual_menu ;;
+        2) cd backend && nohup ./run_celery_worker.sh > ../logs/worker.log 2>&1 & echo "✅ Worker 시작"; sleep 2; individual_menu ;;
+        3) cd backend && nohup ./run_celery_beat.sh > ../logs/beat.log 2>&1 & echo "✅ Beat 시작"; sleep 2; individual_menu ;;
+        4) cd frontend && nohup npm run dev > ../logs/frontend.log 2>&1 & echo "✅ Frontend 시작"; sleep 2; individual_menu ;;
+        5) pkill -f "uvicorn app.main:app"; echo "🔴 Backend 중지"; sleep 1; individual_menu ;;
+        6) pkill -f "celery.*worker"; echo "🔴 Worker 중지"; sleep 1; individual_menu ;;
+        7) pkill -f "celery.*beat"; echo "🔴 Beat 중지"; sleep 1; individual_menu ;;
+        8) pkill -f "next-server"; echo "🔴 Frontend 중지"; sleep 1; individual_menu ;;
+        0) service_menu ;;
+        *) echo "❌ 잘못된 선택"; sleep 1; individual_menu ;;
+    esac
+}
+
+docs_menu() {
+    print_header
+    echo "📚 문서"
+    echo "════════════════════════════════════════════════════════"
+    echo ""
+    echo "  [1] 📖 시작 가이드"
+    echo "  [2] 🤖 개발 가이드"
+    echo "  [3] 🗄️  스크립트"
+    echo "  [4] 🧪 테스트"
+    echo "  [5] 🏗️  프로젝트 구조"
+    echo "  [6] 🛠️  DevTool"
+    echo "  [0] ⬅️  뒤로"
+    echo ""
+    printf "선택 ➤ "
+    read choice
+    
+    case $choice in
+        1) less README_STARTUP.md; docs_menu ;;
+        2) less CLAUDE.md; docs_menu ;;
+        3) less scripts/README.md; docs_menu ;;
+        4) less tests/README.md; docs_menu ;;
+        5) less docs/PROJECT_STRUCTURE.md; docs_menu ;;
+        6) less DEVTOOL.md; docs_menu ;;
+        0) show_main_menu ;;
+        *) echo "❌ 잘못된 선택"; sleep 1; docs_menu ;;
+    esac
+}
+
+[ "$1" == "--help" ] || [ "$1" == "-h" ] && { echo "DevTool - 통합 개발 도구"; echo ""; echo "사용: ./devtool"; exit 0; }
+
+show_main_menu

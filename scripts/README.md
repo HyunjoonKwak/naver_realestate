@@ -61,7 +61,96 @@ backend/.venv/bin/python scripts/reset_db.py
 
 ---
 
-### 3. check_data.py
+### 3. check_schedules.sh
+
+**목적**: Celery Beat 스케줄 및 크롤링 상태 확인 (API 기반)
+
+**기능**:
+- RedBeat 동적 스케줄 조회 (API를 통해 실시간 정보 확인)
+- 등록된 스케줄 목록 및 다음 실행 시간 표시
+- 최근 크롤링 작업 이력 조회
+- Celery Beat/Worker 프로세스 상태 확인
+- 색상별 상태 표시 (성공/실패/진행중)
+
+**사용법**:
+```bash
+# 프로젝트 루트에서 실행
+cd /Users/specialrisk_mac/code_work/naver_realestate
+./scripts/check_schedules.sh
+```
+
+**출력 예시**:
+```
+📅 Celery Beat 스케줄 확인
+======================================
+
+🔍 서버 연결 확인 중...
+✅ 서버 연결 성공
+
+⏰ 현재 시간: 2025-10-10 09:48:00 Thursday
+
+======================================
+
+📋 등록된 스케줄 목록:
+
+🔹 weekly_crawl_all
+   태스크: app.tasks.scheduler.crawl_all_complexes
+   대상 단지: 전체 단지
+   스케줄: 일요일 02:00
+   설명: 주간 전체 단지 크롤링
+
+🔹 daily_crawl_complex_12345
+   태스크: app.tasks.scheduler.crawl_complex_async
+   대상 단지: 12345
+   스케줄: 매일 08:00
+   설명: 특정 단지 매일 크롤링
+
+======================================
+
+📊 최근 크롤링 작업 (최근 5개):
+
+✅ 완료 | 단지: all | 수집: 150건
+   시작: 2025-10-10 02:00:00
+   완료: 2025-10-10 02:05:30
+
+======================================
+
+🔄 Celery Beat 상태:
+
+✅ Celery Beat 실행 중
+   PID: 12345
+   실행 시간: 5:30:00
+
+✅ Celery Worker 실행 중
+   PID: 12346
+   실행 시간: 5:30:00
+
+======================================
+
+💡 유용한 명령어:
+
+  스케줄 관리 (웹):  http://localhost:3000/scheduler
+  API 문서:          http://localhost:8000/docs
+  수동 크롤링:       curl -X POST http://localhost:8000/api/scheduler/trigger/all
+  Beat 재시작 (웹):  http://localhost:3000/scheduler (🔄 재활성화)
+  Beat 재시작 (CLI): pkill -f 'celery.*beat' && cd backend && ./run_celery_beat.sh
+```
+
+**요구사항**:
+- API 서버 실행 중 (http://localhost:8000)
+- jq 설치 (JSON 파싱용): `brew install jq`
+
+**사용 시나리오**:
+- 스케줄이 제대로 등록되었는지 확인
+- 다음 크롤링 실행 시간 확인
+- Beat/Worker 프로세스 상태 모니터링
+- 최근 크롤링 결과 빠른 확인
+
+**Legacy 버전**: `check_schedules_legacy.sh` (정적 스케줄만 지원, RedBeat 미지원)
+
+---
+
+### 4. check_data.py
 
 **목적**: 데이터베이스 내용 확인 및 디버깅
 
