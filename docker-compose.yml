@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: naver_realestate
     ports:
-      - "5433:5432"  # 외부 포트를 5433으로 변경 (NAS의 5432와 충돌 방지)
+      - "5433:5432"  # 로컬 개발용 (호스트: 5433, 컨테이너: 5432)
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -25,7 +25,7 @@ services:
     image: redis:7-alpine
     container_name: naver_realestate_redis
     ports:
-      - "6380:6379"  # 로컬은 6380 포트 사용 (NAS와 분리)
+      - "6380:6379"  # 로컬 개발용 (호스트: 6380, 컨테이너: 6379)
     volumes:
       - redis_data:/data
     healthcheck:

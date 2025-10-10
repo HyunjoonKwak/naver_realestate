@@ -4,6 +4,10 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import os
+from dotenv import load_dotenv
+
+# .env 파일 로드 (프로젝트 루트 우선)
+load_dotenv(override=True)
 
 # 데이터베이스 URL
 DATABASE_URL = os.getenv(

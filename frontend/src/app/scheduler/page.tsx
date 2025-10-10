@@ -117,6 +117,9 @@ export default function SchedulerPage() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [hasInitialData, setHasInitialData] = useState(false);
 
+  // 단지 목록 상태
+  const [complexes, setComplexes] = useState<Array<{ complex_id: string; complex_name: string; road_address: string }>>([]);
+
   // 작업 상세 모달 상태
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedJobDetail, setSelectedJobDetail] = useState<JobDetail | null>(null);
@@ -128,7 +131,8 @@ export default function SchedulerPage() {
     task: 'app.tasks.scheduler.crawl_all_complexes',
     hour: 6,
     minute: 0,
-    day_of_week: '*',
+    day_of_week: [] as string[],
+    complex_id: '',
     description: '',
   });
 
@@ -138,7 +142,8 @@ export default function SchedulerPage() {
     task: 'app.tasks.scheduler.crawl_all_complexes',
     hour: 6,
     minute: 0,
-    day_of_week: '*',
+    day_of_week: [] as string[],
+    complex_id: '',
   });
 
   // Initial load only once
@@ -237,6 +242,15 @@ export default function SchedulerPage() {
     }
   };
 
+  const loadComplexes = async () => {
+    try {
+      const response = await schedulerAPI.getComplexes();
+      setComplexes(response.data.complexes || []);
+    } catch (error) {
+      console.error('단지 목록 로드 실패:', error);
+    }
+  };
+
   const showMessage = (type: 'success' | 'error', text: string) => {
     setMessage({ type, text });
     setTimeout(() => setMessage(null), 5000);
@@ -315,7 +329,13 @@ export default function SchedulerPage() {
   const handleCreateSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await schedulerAPI.createSchedule(formData);
+      // day_of_week 배열을 문자열로 변환
+      const scheduleData = {
+        ...formData,
+        day_of_week: formData.day_of_week.length === 0 ? '*' : formData.day_of_week.join(','),
+        complex_id: formData.complex_id || undefined,
+      };
+      await schedulerAPI.createSchedule(scheduleData);
       showMessage('success', '✅ 스케줄이 생성되었습니다! 5초 이내 자동 반영됩니다.');
       setShowCreateModal(false);
       loadSchedules();
@@ -324,7 +344,8 @@ export default function SchedulerPage() {
         task: 'app.tasks.scheduler.crawl_all_complexes',
         hour: 6,
         minute: 0,
-        day_of_week: '*',
+        day_of_week: [],
+        complex_id: '',
         description: '',
       });
     } catch (error: any) {
@@ -334,12 +355,20 @@ export default function SchedulerPage() {
 
   const handleOpenEditModal = (scheduleName: string, config: any) => {
     const parsedSchedule = parseCronSchedule(config.schedule);
+    // day_of_week이 쉼표로 구분된 경우 배열로 변환
+    const dayOfWeekArray = parsedSchedule.day_of_week === '*'
+      ? []
+      : parsedSchedule.day_of_week.includes(',')
+        ? parsedSchedule.day_of_week.split(',')
+        : [parsedSchedule.day_of_week];
+
     setEditFormData({
       name: scheduleName,
       task: config.task,
       hour: parsedSchedule.hour,
       minute: parsedSchedule.minute,
-      day_of_week: parsedSchedule.day_of_week,
+      day_of_week: dayOfWeekArray,
+      complex_id: config.complex_id || '',
     });
     setShowEditModal(true);
   };
@@ -351,7 +380,8 @@ export default function SchedulerPage() {
         task: editFormData.task,
         hour: editFormData.hour,
         minute: editFormData.minute,
-        day_of_week: editFormData.day_of_week,
+        day_of_week: editFormData.day_of_week.length === 0 ? '*' : editFormData.day_of_week.join(','),
+        complex_id: editFormData.complex_id || undefined,
       });
       showMessage('success', '✅ 스케줄이 수정되었습니다! 5초 이내 자동 반영됩니다.');
       setShowEditModal(false);
@@ -433,11 +463,19 @@ export default function SchedulerPage() {
     if (dow === '*') return '매일';
     // Cron day_of_week: 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday
     const days = ['일', '월', '화', '수', '목', '금', '토'];
+
+    // 쉼표로 구분된 여러 요일 처리
+    if (dow.includes(',')) {
+      const selectedDays = dow.split(',').map(d => days[parseInt(d.trim())] || d.trim());
+      return selectedDays.join(', ');
+    }
+
     return days[parseInt(dow)] || dow;
   };
 
   const getTaskDisplayName = (task: string) => {
     if (task.includes('crawl_all_complexes')) return '전체 단지 크롤링';
+    if (task.includes('crawl_complex_async')) return '특정 단지 크롤링';
     if (task.includes('cleanup_old_snapshots')) return '오래된 스냅샷 정리';
     if (task.includes('send_weekly_briefing')) return '주간 브리핑 발송';
     return task;
@@ -880,15 +918,42 @@ export default function SchedulerPage() {
                     </label>
                     <select
                       value={formData.task}
-                      onChange={(e) => setFormData({ ...formData, task: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, task: e.target.value, complex_id: '' });
+                        if (e.target.value === 'app.tasks.scheduler.crawl_complex_async') {
+                          loadComplexes();
+                        }
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="app.tasks.scheduler.crawl_all_complexes">전체 단지 크롤링</option>
+                      <option value="app.tasks.scheduler.crawl_complex_async">특정 단지 크롤링</option>
                       <option value="app.tasks.scheduler.cleanup_old_snapshots">오래된 스냅샷 정리</option>
                       <option value="app.tasks.briefing_tasks.send_weekly_briefing">주간 브리핑 발송</option>
                       <option value="app.tasks.briefing_tasks.send_custom_briefing">커스텀 브리핑 발송</option>
                     </select>
                   </div>
+
+                  {formData.task === 'app.tasks.scheduler.crawl_complex_async' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        단지 선택
+                      </label>
+                      <select
+                        value={formData.complex_id}
+                        onChange={(e) => setFormData({ ...formData, complex_id: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      >
+                        <option value="">단지를 선택하세요</option>
+                        {complexes.map((complex) => (
+                          <option key={complex.complex_id} value={complex.complex_id}>
+                            {complex.complex_name} ({complex.road_address})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -925,24 +990,65 @@ export default function SchedulerPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       반복 주기
                     </label>
-                    <select
-                      value={formData.day_of_week}
-                      onChange={(e) => setFormData({ ...formData, day_of_week: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="*">매일</option>
-                      <option value="1">매주 월요일</option>
-                      <option value="2">매주 화요일</option>
-                      <option value="3">매주 수요일</option>
-                      <option value="4">매주 목요일</option>
-                      <option value="5">매주 금요일</option>
-                      <option value="6">매주 토요일</option>
-                      <option value="0">매주 일요일</option>
-                      <option value="QUARTERLY_1">분기별 (1월, 4월, 7월, 10월 1일)</option>
-                      <option value="QUARTERLY_15">분기별 (1월, 4월, 7월, 10월 15일)</option>
-                      <option value="MONTHLY_1">매월 1일</option>
-                      <option value="MONTHLY_15">매월 15일</option>
-                    </select>
+                    <div className="space-y-2">
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="everyday"
+                          checked={formData.day_of_week.length === 0}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData({ ...formData, day_of_week: [] });
+                            }
+                          }}
+                          className="mr-2"
+                        />
+                        <label htmlFor="everyday" className="text-sm">매일</label>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[
+                          { value: '1', label: '월' },
+                          { value: '2', label: '화' },
+                          { value: '3', label: '수' },
+                          { value: '4', label: '목' },
+                          { value: '5', label: '금' },
+                          { value: '6', label: '토' },
+                          { value: '0', label: '일' },
+                        ].map((day) => (
+                          <div key={day.value} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              id={`day-${day.value}`}
+                              checked={formData.day_of_week.includes(day.value)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFormData({ ...formData, day_of_week: [...formData.day_of_week, day.value] });
+                                } else {
+                                  setFormData({ ...formData, day_of_week: formData.day_of_week.filter(d => d !== day.value) });
+                                }
+                              }}
+                              className="mr-1"
+                            />
+                            <label htmlFor={`day-${day.value}`} className="text-sm">{day.label}</label>
+                          </div>
+                        ))}
+                      </div>
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            setFormData({ ...formData, day_of_week: [e.target.value] });
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      >
+                        <option value="">특수 스케줄 선택...</option>
+                        <option value="QUARTERLY_1">분기별 (1월, 4월, 7월, 10월 1일)</option>
+                        <option value="QUARTERLY_15">분기별 (1월, 4월, 7월, 10월 15일)</option>
+                        <option value="MONTHLY_1">매월 1일</option>
+                        <option value="MONTHLY_15">매월 15일</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div>
@@ -1008,15 +1114,42 @@ export default function SchedulerPage() {
                     </label>
                     <select
                       value={editFormData.task}
-                      onChange={(e) => setEditFormData({ ...editFormData, task: e.target.value })}
+                      onChange={(e) => {
+                        setEditFormData({ ...editFormData, task: e.target.value, complex_id: '' });
+                        if (e.target.value === 'app.tasks.scheduler.crawl_complex_async') {
+                          loadComplexes();
+                        }
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="app.tasks.scheduler.crawl_all_complexes">전체 단지 크롤링</option>
+                      <option value="app.tasks.scheduler.crawl_complex_async">특정 단지 크롤링</option>
                       <option value="app.tasks.scheduler.cleanup_old_snapshots">오래된 스냅샷 정리</option>
                       <option value="app.tasks.briefing_tasks.send_weekly_briefing">주간 브리핑 발송</option>
                       <option value="app.tasks.briefing_tasks.send_custom_briefing">커스텀 브리핑 발송</option>
                     </select>
                   </div>
+
+                  {editFormData.task === 'app.tasks.scheduler.crawl_complex_async' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        단지 선택
+                      </label>
+                      <select
+                        value={editFormData.complex_id}
+                        onChange={(e) => setEditFormData({ ...editFormData, complex_id: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      >
+                        <option value="">단지를 선택하세요</option>
+                        {complexes.map((complex) => (
+                          <option key={complex.complex_id} value={complex.complex_id}>
+                            {complex.complex_name} ({complex.road_address})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -1053,24 +1186,65 @@ export default function SchedulerPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       반복 주기
                     </label>
-                    <select
-                      value={editFormData.day_of_week}
-                      onChange={(e) => setEditFormData({ ...editFormData, day_of_week: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="*">매일</option>
-                      <option value="1">매주 월요일</option>
-                      <option value="2">매주 화요일</option>
-                      <option value="3">매주 수요일</option>
-                      <option value="4">매주 목요일</option>
-                      <option value="5">매주 금요일</option>
-                      <option value="6">매주 토요일</option>
-                      <option value="0">매주 일요일</option>
-                      <option value="QUARTERLY_1">분기별 (1월, 4월, 7월, 10월 15일)</option>
-                      <option value="QUARTERLY_15">분기별 (1월, 4월, 7월, 10월 15일)</option>
-                      <option value="MONTHLY_1">매월 1일</option>
-                      <option value="MONTHLY_15">매월 15일</option>
-                    </select>
+                    <div className="space-y-2">
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="edit-everyday"
+                          checked={editFormData.day_of_week.length === 0}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setEditFormData({ ...editFormData, day_of_week: [] });
+                            }
+                          }}
+                          className="mr-2"
+                        />
+                        <label htmlFor="edit-everyday" className="text-sm">매일</label>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[
+                          { value: '1', label: '월' },
+                          { value: '2', label: '화' },
+                          { value: '3', label: '수' },
+                          { value: '4', label: '목' },
+                          { value: '5', label: '금' },
+                          { value: '6', label: '토' },
+                          { value: '0', label: '일' },
+                        ].map((day) => (
+                          <div key={day.value} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              id={`edit-day-${day.value}`}
+                              checked={editFormData.day_of_week.includes(day.value)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setEditFormData({ ...editFormData, day_of_week: [...editFormData.day_of_week, day.value] });
+                                } else {
+                                  setEditFormData({ ...editFormData, day_of_week: editFormData.day_of_week.filter(d => d !== day.value) });
+                                }
+                              }}
+                              className="mr-1"
+                            />
+                            <label htmlFor={`edit-day-${day.value}`} className="text-sm">{day.label}</label>
+                          </div>
+                        ))}
+                      </div>
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            setEditFormData({ ...editFormData, day_of_week: [e.target.value] });
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      >
+                        <option value="">특수 스케줄 선택...</option>
+                        <option value="QUARTERLY_1">분기별 (1월, 4월, 7월, 10월 1일)</option>
+                        <option value="QUARTERLY_15">분기별 (1월, 4월, 7월, 10월 15일)</option>
+                        <option value="MONTHLY_1">매월 1일</option>
+                        <option value="MONTHLY_15">매월 15일</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
 

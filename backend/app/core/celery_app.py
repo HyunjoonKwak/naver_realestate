@@ -5,16 +5,10 @@ import os
 from pathlib import Path
 from celery import Celery
 from celery.schedules import crontab
+from dotenv import load_dotenv
 
-# .env 파일 수동 로드 (Celery worker에서 환경변수 사용)
-env_path = Path(__file__).parent.parent.parent / '.env'
-if env_path.exists():
-    with open(env_path) as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith('#') and '=' in line:
-                key, value = line.split('=', 1)
-                os.environ.setdefault(key, value)
+# .env 파일 자동 로드 (프로젝트 루트에서 찾음)
+load_dotenv(override=True)
 
 # Redis 연결 설정
 # 환경변수 REDIS_URL이 있으면 우선 사용, 없으면 REDIS_HOST/PORT로 구성

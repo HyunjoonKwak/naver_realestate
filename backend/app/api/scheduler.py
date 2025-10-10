@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from celery.schedules import crontab
 from app.core.celery_app import celery_app
 from app.core.database import get_db
-from app.models.complex import CrawlJob
+from app.models.complex import CrawlJob, Complex
 from app.tasks.scheduler import crawl_all_complexes, crawl_complex_async
 from app.core.schedule_manager import (
     update_schedule_in_file,
@@ -26,7 +26,8 @@ class ScheduleCreate(BaseModel):
     task: str
     hour: int
     minute: int
-    day_of_week: Optional[str] = "*"  # 0-6 or * for every day
+    day_of_week: Optional[str] = "*"  # 0-6 or * for every day, comma-separated for multiple days
+    complex_id: Optional[str] = None  # 특정 단지 크롤링 시 단지 ID
     description: Optional[str] = None
 
 
@@ -36,6 +37,7 @@ class ScheduleUpdate(BaseModel):
     hour: Optional[int] = None
     minute: Optional[int] = None
     day_of_week: Optional[str] = None
+    complex_id: Optional[str] = None
     enabled: Optional[bool] = None
 
 
@@ -311,6 +313,7 @@ def create_schedule(schedule: ScheduleCreate):
         # 태스크 이름 검증
         available_tasks = [
             "app.tasks.scheduler.crawl_all_complexes",
+            "app.tasks.scheduler.crawl_complex_async",
             "app.tasks.scheduler.cleanup_old_snapshots",
             "app.tasks.briefing_tasks.send_weekly_briefing",
             "app.tasks.briefing_tasks.send_custom_briefing"
@@ -320,6 +323,13 @@ def create_schedule(schedule: ScheduleCreate):
             raise HTTPException(
                 status_code=400,
                 detail=f"유효하지 않은 태스크입니다. 사용 가능한 태스크: {available_tasks}"
+            )
+
+        # 특정 단지 크롤링 시 complex_id 필수
+        if schedule.task == "app.tasks.scheduler.crawl_complex_async" and not schedule.complex_id:
+            raise HTTPException(
+                status_code=400,
+                detail="특정 단지 크롤링 작업에는 complex_id가 필요합니다."
             )
 
         # 스케줄 이름 중복 확인
@@ -363,7 +373,7 @@ def create_schedule(schedule: ScheduleCreate):
                 day_of_month='15'
             )
         else:
-            # 일반 요일 (0-6)
+            # 일반 요일 (0-6) - 다중 선택 지원 (쉼표로 구분)
             schedule_obj = crontab(
                 hour=schedule.hour,
                 minute=schedule.minute,
@@ -371,10 +381,13 @@ def create_schedule(schedule: ScheduleCreate):
             )
 
         # RedBeat Entry로 Redis에 직접 저장 (즉시 반영!)
+        # 특정 단지 크롤링 시 args에 complex_id 포함
+        entry_args = [schedule.complex_id] if schedule.complex_id else []
         entry = RedBeatSchedulerEntry(
             name=schedule.name,
             task=schedule.task,
             schedule=schedule_obj,
+            args=entry_args,
             app=celery_app,
             options={"expires": 3600}
         )
@@ -386,10 +399,12 @@ def create_schedule(schedule: ScheduleCreate):
             "schedule": {
                 "hour": schedule.hour,
                 "minute": schedule.minute,
-                "day_of_week": int(schedule.day_of_week) if isinstance(schedule.day_of_week, str) and schedule.day_of_week.isdigit() else schedule.day_of_week
+                "day_of_week": schedule.day_of_week
             },
+            "args": [schedule.complex_id] if schedule.complex_id else [],
             "enabled": True,
-            "description": schedule.description or ""
+            "description": schedule.description or "",
+            "complex_id": schedule.complex_id
         }
 
         if not update_schedule_in_file(schedule.name, schedule_data):
@@ -444,6 +459,7 @@ def update_schedule(schedule_name: str, schedule_update: ScheduleUpdate):
         if schedule_update.task is not None:
             available_tasks = [
                 "app.tasks.scheduler.crawl_all_complexes",
+                "app.tasks.scheduler.crawl_complex_async",
                 "app.tasks.scheduler.cleanup_old_snapshots",
                 "app.tasks.briefing_tasks.send_weekly_briefing",
                 "app.tasks.briefing_tasks.send_custom_briefing"
@@ -477,15 +493,19 @@ def update_schedule(schedule_name: str, schedule_update: ScheduleUpdate):
             else:
                 day_of_week = "*"
 
+        # complex_id 처리
+        complex_id = schedule_update.complex_id if schedule_update.complex_id is not None else (entry.args[0] if entry.args else None)
+
         # 새 Crontab 생성
         if day_of_week == "*":
             new_schedule = crontab(hour=hour, minute=minute)
         else:
-            new_schedule = crontab(hour=hour, minute=minute, day_of_week=int(day_of_week) if day_of_week.isdigit() else day_of_week)
+            new_schedule = crontab(hour=hour, minute=minute, day_of_week=day_of_week)
 
         # Redis에 업데이트된 Entry 저장
         entry.task = task
         entry.schedule = new_schedule
+        entry.args = [complex_id] if complex_id else []
         entry.save()
 
         # JSON 파일에도 저장 (영구 저장)
@@ -494,7 +514,9 @@ def update_schedule(schedule_name: str, schedule_update: ScheduleUpdate):
             schedules_data[schedule_name]["task"] = task
             schedules_data[schedule_name]["schedule"]["hour"] = hour
             schedules_data[schedule_name]["schedule"]["minute"] = minute
-            schedules_data[schedule_name]["schedule"]["day_of_week"] = int(day_of_week) if isinstance(day_of_week, str) and day_of_week.isdigit() else day_of_week
+            schedules_data[schedule_name]["schedule"]["day_of_week"] = day_of_week
+            schedules_data[schedule_name]["args"] = [complex_id] if complex_id else []
+            schedules_data[schedule_name]["complex_id"] = complex_id
             update_schedule_in_file(schedule_name, schedules_data[schedule_name])
 
         return {
@@ -750,6 +772,33 @@ def get_crawl_stats():
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"통계 조회 실패: {str(e)}")
+
+
+@router.get("/complexes", response_model=Dict[str, Any])
+def get_complexes_for_schedule(db: Session = Depends(get_db)):
+    """
+    스케줄 설정을 위한 단지 목록 조회
+
+    Returns:
+        단지 목록
+    """
+    try:
+        complexes = db.query(Complex).all()
+
+        result = []
+        for complex_obj in complexes:
+            result.append({
+                "complex_id": complex_obj.complex_id,
+                "complex_name": complex_obj.complex_name,
+                "road_address": complex_obj.road_address
+            })
+
+        return {
+            "count": len(result),
+            "complexes": result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"단지 목록 조회 실패: {str(e)}")
 
 
 @router.get("/jobs/running/current", response_model=Dict[str, Any])

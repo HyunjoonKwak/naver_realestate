@@ -132,3 +132,7 @@ backend/*.png
 
 # Scheduler config (환경별로 다른 설정 - Git 추적 제외)
 backend/app/config/schedules.json
+
+# 로그 파일
+logs/
+*.log

@@ -69,12 +69,14 @@ export const scraperAPI = {
 export const schedulerAPI = {
   getSchedule: () => api.get('/api/scheduler/schedule'),
   getStatus: () => api.get('/api/scheduler/status'),
+  getComplexes: () => api.get('/api/scheduler/complexes'),
   createSchedule: (data: {
     name: string;
     task: string;
     hour: number;
     minute: number;
     day_of_week?: string;
+    complex_id?: string;
     description?: string;
   }) => api.post('/api/scheduler/schedule', data),
   updateSchedule: (name: string, data: {
@@ -82,6 +84,7 @@ export const schedulerAPI = {
     hour?: number;
     minute?: number;
     day_of_week?: string;
+    complex_id?: string;
     enabled?: boolean;
   }) => api.put(`/api/scheduler/schedule/${name}`, data),
   deleteSchedule: (name: string) => api.delete(`/api/scheduler/schedule/${name}`),
