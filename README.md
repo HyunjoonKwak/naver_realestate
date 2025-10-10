@@ -1,295 +1,365 @@
-# 네이버 부동산 매물 관리 시스템
+# 🏠 네이버 부동산 매물 추적 시스템
 
-네이버 부동산 데이터를 크롤링하여 매물 변동, 가격 추이를 추적하고 분석하는 풀스택 웹 애플리케이션
+> 네이버 부동산 아파트 매물을 자동으로 수집하고, 가격 변동을 추적하며, 실거래가를 분석하는 풀스택 웹 애플리케이션
 
-## 🎯 주요 기능
+[![Python](https://img.shields.io/badge/Python-3.13-blue)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Latest-green)](https://fastapi.tiangolo.com/)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue)](https://www.postgresql.org/)
 
-### ✅ 구현 완료
-- 🏢 **단지 정보 수집**: 세대수, 동수, 면적, 준공일 등 상세 정보
-- 💰 **매물 추적**: 매매/전세 매물 정보 및 가격 변동 자동 감지
-- 🔗 **동일매물묶기**: localStorage 기반 네이버 동일매물묶기 기능 완벽 지원
-- 🔄 **자동 업데이트**: 중복 체크 및 증분 업데이트
-- 🗄️ **데이터베이스**: PostgreSQL에 체계적으로 저장
-- 🚀 **REST API**: FastAPI 기반 완전한 API 서버
-- 📈 **통계 분석**: 면적별 최고가/최저가 분석
-- 🎨 **웹 프론트엔드**: Next.js 14 + TypeScript + Tailwind CSS
-  - 📊 대시보드 (통계 요약, 단지 목록)
-  - 🏘️ 단지 목록 및 상세 페이지
-  - 🔍 매물 필터링 (거래유형/면적/동)
-  - 📋 엑셀 스타일 매물 테이블 뷰
-  - 💹 면적별 가격 정보 카드
-  - 📱 반응형 디자인 (모바일/태블릿/데스크톱)
+---
 
-### ✅ 최근 완료 (2025-10-09/10)
-- 🤖 **자동 크롤링 + Discord 브리핑**: 스케줄러 크롤링 완료 후 자동 브리핑
-  - Discord Webhook 연동
-  - 크롤링 통계 (성공/실패 단지, 수집 매물 수, 소요시간)
-  - 주간 변동사항 요약 (신규/삭제/가격변동)
-  - 단지별 상세 정보
-- 🏛️ **실거래가 기능**: 국토부 오픈API 연동 완료
-  - 전국 20,278개 법정동 코드 자동 매칭
-  - 최근 6개월 실거래가 자동 조회
-  - 평형별 통계 (평균/최고/최저/거래건수)
-  - 단지 새로고침 시 자동 업데이트
-- 📅 **스케줄러 관리 페이지**: 웹 UI에서 스케줄 CRUD
-  - RedBeat 기반 동적 스케줄링 (재시작 불필요)
-  - 크롤링 작업 이력 및 통계
-  - Celery Beat 재시작 버튼 (Mac 슬립 복구)
-- 🎨 **UI/UX 개선**:
-  - 면적별 가격 정보 (전용/공급면적/평형 표시)
-  - 매물 리스트 (공급면적, 전용면적→평형 환산)
-  - 가격 파싱 버그 수정 (억/만원 정확한 계산)
-- 📊 **가격 추이 차트**: Chart.js 기반 실거래가 시계열 그래프
-  - 평균가, 최고가, 최저가 추이 시각화
-  - 월별 거래건수 표시
-  - 최근 6개월 데이터 차트
+## 📋 목차
 
-### 🚧 개발 예정
-- 🤖 **가격 분석**: 최적 매매 시기 추천
-- 🔐 **사용자 인증**: 개인화 및 관심 단지 관리 (백엔드 API 완료)
+1. [빠른 시작 (5분)](#-빠른-시작-5분)
+2. [주요 기능](#-주요-기능)
+3. [기술 스택](#-기술-스택)
+4. [상세 가이드](#-상세-가이드)
+5. [문제 해결](#-문제-해결)
 
-## 🚀 빠른 시작
+---
 
-### 1. Docker 컨테이너 시작
+## 🚀 빠른 시작 (5분)
+
+### 필수 요구사항
+
+- **macOS/Linux** (GUI 환경 필요)
+- **Docker Desktop** ([설치](https://www.docker.com/products/docker-desktop/))
+- **Node.js 18+** ([설치](https://nodejs.org/))
+- **Python 3.13** (이미 설정됨)
+
+### 1단계: 프로젝트 받기
+
 ```bash
+git clone <repository-url>
+cd naver_realestate
+```
+
+### 2단계: 환경 설정
+
+```bash
+# Docker 시작 (PostgreSQL + Redis)
 docker-compose up -d
+
+# 데이터베이스 초기화
+backend/.venv/bin/python scripts/migrate_db.py
+
+# Frontend 의존성 설치 (최초 1회)
+cd frontend && npm install && cd ..
 ```
 
-### 2. 데이터베이스 초기화
+### 3단계: DevTool로 실행 ⭐
+
 ```bash
-backend/.venv/bin/python reset_db.py
+./devtool
 ```
 
-### 3. API 서버 시작
+DevTool 메뉴에서:
+1. `[4]` 서비스 관리 선택
+2. `[1]` 전체 시작
+
+**또는 수동 실행:**
 ```bash
-cd backend
-.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+./scripts/start_all.sh  # 모든 서비스 시작
 ```
 
-### 4. 프론트엔드 시작 (새 터미널)
-```bash
-cd frontend
-npm install  # 최초 1회만
-npm run dev
-```
+### 4단계: 웹 브라우저에서 확인
 
-### 5. 브라우저에서 단지 추가
 - **프론트엔드**: http://localhost:3000
-- 우측 상단 "단지 추가" 버튼 클릭
-- 네이버 부동산 URL 입력 (예: `https://new.land.naver.com/complexes/1482`)
-- 크롤링이 백그라운드에서 자동 실행됩니다
+- **API 문서**: http://localhost:8000/docs
+- **스케줄러**: http://localhost:3000/scheduler
 
-### 6. 자동 크롤링 & Discord 브리핑 설정 (선택사항)
-```bash
-# .env 파일 생성 및 Discord Webhook URL 설정
-cp .env.example .env
-# 에디터로 .env 열어서 DISCORD_WEBHOOK_URL 설정
+### 5단계: 단지 추가하기
 
-# Celery Worker & Beat 시작
-cd backend
-./run_celery_worker.sh  # 새 터미널 1
-./run_celery_beat.sh     # 새 터미널 2
+1. http://localhost:3000 접속
+2. 우측 상단 "단지 추가" 버튼 클릭
+3. 네이버 부동산 URL 입력
+   - 예: `https://new.land.naver.com/complexes/109208`
+4. 크롤링 자동 시작!
 
-# 스케줄: 매주 월요일 06:00 - 모든 단지 크롤링 → Discord 브리핑 자동 전송
+---
+
+## ✨ 주요 기능
+
+### 📊 데이터 수집 & 분석
+- ✅ **자동 크롤링**: Playwright 기반 네이버 부동산 매물 수집
+- ✅ **가격 추적**: 매매/전세 가격 변동 자동 감지
+- ✅ **실거래가 연동**: 국토부 오픈API 실거래가 자동 조회
+- ✅ **동일매물묶기**: 네이버 기능 완벽 지원
+
+### 🤖 자동화 & 알림
+- ✅ **스케줄 크롤링**: 원하는 시간에 자동 실행
+- ✅ **Discord 브리핑**: 주간 변동사항 자동 알림
+- ✅ **가격 변동 알림**: 신규/삭제/가격변동 실시간 감지
+
+### 📈 시각화 & 통계
+- ✅ **가격 차트**: Chart.js 기반 실거래가 추이 그래프
+- ✅ **평형별 통계**: 면적별 최고/최저/평균가 분석
+- ✅ **대시보드**: 단지별 매물 현황 한눈에 보기
+
+---
+
+## 🛠️ 기술 스택
+
+### Backend
+```
+Python 3.13 + FastAPI + PostgreSQL 15 + Redis 7
+├─ Playwright      # 웹 크롤링
+├─ SQLAlchemy 2.0  # ORM
+├─ Celery          # 백그라운드 작업
+└─ RedBeat         # 동적 스케줄링
 ```
 
-### 7. 참고
-- **API 문서**: http://localhost:8000/docs 📖
-- **크롤링 직접 실행**: `backend/.venv/bin/python advanced_crawler.py`
+### Frontend
+```
+Next.js 14 + React 18 + TypeScript
+├─ Tailwind CSS    # 스타일링
+├─ Chart.js        # 데이터 시각화
+└─ Axios           # HTTP 클라이언트
+```
 
-## 📂 프로젝트 구조
+### Infrastructure
+```
+Docker + Docker Compose
+├─ PostgreSQL (포트 5433)
+└─ Redis (포트 6380)
+```
+
+---
+
+## 📚 상세 가이드
+
+### 🔧 DevTool 사용법
+
+DevTool은 모든 작업을 쉽게 수행할 수 있는 통합 도구입니다.
+
+```bash
+./devtool
+```
+
+**주요 기능:**
+- 🗄️ **데이터베이스 관리**: 내용 확인, 마이그레이션, 초기화
+- 🧪 **테스트 실행**: API, 실거래가, Discord 테스트
+- 📊 **모니터링**: 스케줄 상태, 로그 확인, 프로세스 관리
+- 🚀 **서비스 관리**: 전체/개별 시작/중지
+- 📚 **문서 보기**: 모든 가이드 바로 열기
+
+자세한 내용: [DEVTOOL.md](DEVTOOL.md)
+
+### 🔄 서비스 관리
+
+**방법 1: DevTool (권장)**
+```bash
+./devtool
+# 메뉴: [4] → [1] 전체 시작
+```
+
+**방법 2: 스크립트**
+```bash
+./scripts/start_all.sh  # 시작
+./scripts/stop_all.sh   # 중지
+./scripts/logs_all.sh   # 로그 보기
+```
+
+**방법 3: 수동 (디버깅용)**
+```bash
+# 터미널 1: Backend API
+cd backend && .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+# 터미널 2: Celery Worker
+cd backend && .venv/bin/celery -A app.core.celery_app worker --loglevel=info
+
+# 터미널 3: Celery Beat
+cd backend && .venv/bin/celery -A app.core.celery_app beat --scheduler redbeat.RedBeatScheduler --loglevel=info
+
+# 터미널 4: Frontend
+cd frontend && npm run dev
+```
+
+### 📅 자동 크롤링 & Discord 알림 설정
+
+1. **Discord Webhook 생성**
+   - Discord 서버 → 채널 설정 → 연동 → 웹후크
+   - Webhook URL 복사
+
+2. **환경변수 설정**
+   ```bash
+   # backend/.env 파일에 추가
+   DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your-webhook-url
+   MOLIT_API_KEY=your-molit-api-key  # 국토부 API (선택)
+   ```
+
+3. **스케줄 설정**
+   - http://localhost:3000/scheduler 접속
+   - "새 스케줄 추가" 버튼 클릭
+   - 원하는 시간과 단지 선택
+
+4. **자동 실행 확인**
+   - 설정한 시간에 자동 크롤링
+   - Discord로 변동사항 브리핑 전송
+
+### 🧪 테스트
+
+```bash
+# DevTool에서
+./devtool → [2] 테스트 실행 → [4] 전체 테스트
+
+# 또는 직접 실행
+./tests/test_api.sh                 # API 테스트
+./tests/test_transaction_api.sh     # 실거래가 테스트
+./tests/test_discord_briefing.sh    # Discord 테스트
+```
+
+---
+
+## 🗂️ 프로젝트 구조
 
 ```
 naver_realestate/
-├── advanced_crawler.py      # ⭐ 통합 크롤러 (단지/매물/실거래)
-├── backend/
+├── devtool                    # ⭐ 통합 개발 도구
+├── backend/                   # FastAPI 백엔드
 │   ├── app/
-│   │   ├── api/             # ⭐ FastAPI 라우터 (complexes, articles, transactions)
-│   │   ├── schemas/         # ⭐ Pydantic 스키마
-│   │   ├── core/            # 데이터베이스 설정
-│   │   ├── models/          # SQLAlchemy 모델
-│   │   ├── crawler/         # 크롤러 모듈
-│   │   └── main.py          # ⭐ FastAPI 메인 앱
-│   └── venv/                # Python 가상환경
-├── frontend/                 # ⭐ Next.js 프론트엔드
-│   ├── src/
-│   │   ├── app/             # ⭐ Next.js 페이지 (App Router)
-│   │   ├── lib/             # ⭐ API 클라이언트 (axios)
-│   │   └── types/           # TypeScript 타입 정의
-│   ├── package.json
-│   └── tsconfig.json
-├── docs/                    # 프로젝트 문서
-│   ├── PROJECT_OVERVIEW.md
-│   ├── PROGRESS_SUMMARY.md
-│   ├── API_GUIDE.md         # ⭐ API 가이드
-│   ├── SETUP_GUIDE.md
-│   └── IMPLEMENTATION_CHECKLIST.md
-├── test_api.sh              # ⭐ API 테스트 스크립트
-├── docker-compose.yml       # Docker 설정
-└── README.md
+│   │   ├── api/              # REST API 엔드포인트
+│   │   ├── models/           # 데이터베이스 모델
+│   │   ├── services/         # 비즈니스 로직 (크롤러, 실거래가)
+│   │   ├── tasks/            # Celery 백그라운드 작업
+│   │   └── main.py           # FastAPI 앱
+│   └── .venv/                # Python 가상환경
+├── frontend/                  # Next.js 프론트엔드
+│   ├── src/app/              # 페이지 (App Router)
+│   ├── src/lib/              # API 클라이언트
+│   └── src/types/            # TypeScript 타입
+├── scripts/                   # 유틸리티 스크립트
+│   ├── start_all.sh          # 전체 시작
+│   ├── stop_all.sh           # 전체 중지
+│   ├── check_schedules.sh    # 스케줄 확인
+│   └── *.py                  # DB 관리 스크립트
+├── tests/                     # 테스트 스크립트
+├── docs/                      # 상세 문서
+└── docker-compose.yml         # Docker 설정
 ```
 
-## 🔧 기술 스택
+---
 
-### Backend
-- **Python 3.13** + Playwright (웹 크롤링)
-- **FastAPI** + Uvicorn (REST API)
-- **PostgreSQL 15** (데이터베이스)
-- **Redis 7** (캐시/메시지 브로커)
-- **SQLAlchemy 2.0** (ORM)
-- **Pydantic** (데이터 검증)
+## ❓ 문제 해결
 
-### Frontend
-- **Next.js 14** (App Router)
-- **React 18** + TypeScript
-- **Tailwind CSS** (스타일링)
-- **Recharts** (데이터 시각화)
-- **Axios** (HTTP 클라이언트)
+### 서버가 안 켜져요
 
-### Infrastructure
-- **Docker & Docker Compose** (컨테이너화)
+```bash
+# 1. Docker 상태 확인
+docker ps
 
-## 📖 상세 문서
+# 2. 포트 충돌 확인
+lsof -i :8000  # Backend
+lsof -i :3000  # Frontend
+lsof -i :5433  # PostgreSQL
+lsof -i :6380  # Redis
 
-- [프로젝트 개요](docs/PROJECT_OVERVIEW.md)
-- [진행 상황 요약](docs/PROGRESS_SUMMARY.md)
-- [API 가이드](docs/API_GUIDE.md) ⭐
-- [Discord 브리핑 설정 가이드](docs/DISCORD_BRIEFING_GUIDE.md) 🆕
-- [Webhook 설정 가이드](docs/WEBHOOK_SETUP_GUIDE.md)
-- [국토부 실거래가 API 연동](docs/MOLIT_API_INTEGRATION.md)
-- [주간 브리핑 기능 설계](docs/WEEKLY_BRIEFING_FEATURE.md)
-- [구현 체크리스트](docs/IMPLEMENTATION_CHECKLIST.md)
-- [Docker 가이드](docs/SETUP_GUIDE.md)
+# 3. DevTool로 확인
+./devtool → [3] 모니터링 → [4] 프로세스 상태
+```
+
+### 크롤링이 안 돼요
+
+**원인**: Playwright 브라우저 미설치
+```bash
+cd backend
+.venv/bin/playwright install chromium
+```
+
+### Celery Beat가 죽었어요 (Mac 슬립 후)
+
+```bash
+# 방법 1: 웹 UI에서 재시작
+# http://localhost:3000/scheduler → 🔄 재활성화 버튼
+
+# 방법 2: DevTool에서
+./devtool → [4] 서비스 관리 → [5] 개별 관리 → [7] Beat 중지 → [3] Beat 시작
+```
+
+### 로그 확인하고 싶어요
+
+```bash
+# 실시간 로그
+./scripts/logs_all.sh
+
+# 개별 로그
+tail -f logs/backend.log
+tail -f logs/worker.log
+tail -f logs/beat.log
+tail -f logs/frontend.log
+```
+
+### 데이터베이스 초기화
+
+```bash
+./devtool → [1] 데이터베이스 관리 → [3] 초기화
+# 또는
+backend/.venv/bin/python scripts/reset_db.py
+```
+
+---
+
+## 📖 추가 문서
+
+### 개발자용
+- [개발 가이드 (CLAUDE.md)](CLAUDE.md) - 코드 구조, API 설계
+- [프로젝트 구조 (docs/PROJECT_STRUCTURE.md)](docs/PROJECT_STRUCTURE.md) - 상세 아키텍처
+- [DevTool 가이드 (DEVTOOL.md)](DEVTOOL.md) - 도구 사용법
+
+### 기능별
+- [스크립트 가이드 (scripts/README.md)](scripts/README.md) - 유틸리티 스크립트
+- [테스트 가이드 (tests/README.md)](tests/README.md) - 테스트 방법
+- [Discord 브리핑 (docs/*.md)](docs/) - 각종 기능 문서
+
+---
+
+## 🎯 로드맵
+
+### ✅ 완료
+- [x] 네이버 부동산 크롤링 (동일매물묶기 지원)
+- [x] FastAPI REST API
+- [x] Next.js 프론트엔드
+- [x] 실거래가 연동 (국토부 오픈API)
+- [x] 자동 스케줄링 (RedBeat)
+- [x] Discord 브리핑
+- [x] DevTool 통합 관리 도구
+
+### 🚧 진행 중
+- [ ] 가격 분석 AI (최적 매매 시기 추천)
+- [ ] 사용자 인증 (개인화 기능)
+
+---
 
 ## ⚠️ 주의사항
 
-- 네이버 부동산 이용약관 준수
-- 개인 용도로만 사용
-- 과도한 요청 시 IP 차단 가능
-- Bot 탐지 방지를 위해 headless=False 권장
+- ✋ **네이버 부동산 이용약관** 준수 필수
+- 🔒 **개인 용도**로만 사용하세요
+- 🚫 **과도한 크롤링** 시 IP 차단 가능
+- 🖥️ **GUI 환경 필요** (headless=False)
+- 💾 **정기 백업** 권장
 
-## 📈 현재 상태
-
-**Phase 5 완료** (2025-10-04) 🎉
-
-### 최근 업데이트 (2025-10-04)
-- ✅ **동일매물묶기 완벽 구현**: localStorage 기반 네이버 API 정확한 데이터 수집
-- ✅ **엑셀 스타일 테이블**: 매물 리스트를 한눈에 보기 쉬운 테이블로 전환
-- ✅ **고급 필터링**: 거래유형/면적/동 3가지 필터 + 필터 초기화 기능
-- ✅ **면적별 가격 정보**: 매매/전세별 최고가/최저가 카드 뷰
-- ✅ **수집일시 표시**: 매물별 크롤링 시간 추적
-- ✅ **실거래가 기능 제거**: 코드 정리 (향후 재추가 예정)
-
-### 시스템 구성
-- API 엔드포인트: 10+개
-- 프론트엔드 페이지: 4개 (대시보드, 단지목록, 단지상세, 단지추가)
-- 데이터베이스 테이블: 3개 (Complex, Article, Transaction)
-
-### 완성된 기능
-
-**크롤링 시스템 (Playwright)**
-- ✅ localStorage 기반 동일매물묶기 설정
-- ✅ 페이지 로드 전 설정 주입
-- ✅ 체크박스 자동 활성화 검증
-- ✅ 네트워크 응답 가로채기
-- ✅ 스크롤 기반 전체 매물 수집
-- ✅ articleNo 기반 중복 제거
-- ✅ 증분 업데이트 및 가격 변동 추적
-
-**백엔드 (FastAPI)**
-- ✅ 단지 CRUD API (생성/조회/수정/삭제)
-- ✅ 단지 통계 API (매매/전세 집계)
-- ✅ 매물 조회 API (단지별)
-- ✅ 백그라운드 크롤링 API
-- ✅ CORS 설정 (프론트엔드 연동)
-- ✅ OpenAPI 문서 자동 생성
-
-**프론트엔드 (Next.js)**
-- ✅ **대시보드**
-  - 단지/매물 통계 카드
-  - 단지 목록 그리드
-  - 단지 추가 버튼
-  - 실제 API 연동
-
-- ✅ **단지 상세 페이지**
-  - 단지 정보 헤더
-  - 매매/전세 통계
-  - **면적별 가격 정보** (매매/전세 최고가/최저가)
-  - **고급 필터** (거래유형/면적/동)
-  - **엑셀 스타일 매물 테이블**
-  - 수집일시 표시
-  - 단지 삭제 기능
-
-- ✅ **단지 추가 페이지**
-  - URL 기반 단지 추가
-  - 백그라운드 크롤링
-  - 실시간 진행 상태
-
-**다음 단계**: 실거래가 기능 재구현, Celery 자동화 스케줄링
-
-## 💻 개발 환경 설정
-
-### 필수 요구사항
-- Docker Desktop
-- Python 3.11+
-- Node.js 18+
-
-### 설치 방법
-```bash
-# 1. 저장소 클론
-git clone <repository-url>
-cd naver_realestate
-
-# 2. Docker 시작
-docker-compose up -d
-
-# 3. Python 가상환경 (이미 설정됨)
-cd backend
-source .venv/bin/activate
-
-# 4. Playwright 브라우저 설치
-.venv/bin/playwright install chromium
-
-# 5. 프론트엔드 의존성 설치
-cd ../frontend
-npm install
-```
-
-## 🧪 테스트
-
-### API 테스트
-```bash
-./test_api.sh
-```
-
-### 프론트엔드 개발 서버
-```bash
-cd frontend
-npm run dev
-```
-
-### 크롤러 테스트
-```bash
-backend/.venv/bin/python advanced_crawler.py
-```
-
-## 🔑 핵심 기술
-
-### 동일매물묶기 구현
-네이버 부동산의 "동일매물묶기" 기능을 완벽하게 재현:
-1. **localStorage 설정**: 페이지 로드 전 `sameAddrYn=true` 설정
-2. **체크박스 자동 활성화**: JavaScript로 체크박스 상태 확인 및 클릭
-3. **API 파라미터 검증**: `sameAddressGroup=true` 확인
-4. **정확한 데이터 수집**: 네이버와 동일한 묶음 기준 적용
-
-### 크롤링 최적화
-- **스크롤 기반 수집**: `.item_list` 컨테이너 내부 스크롤
-- **중복 제거**: `articleNo` 기반 unique 체크
-- **증분 업데이트**: 기존 매물과 비교하여 변경사항만 저장
+---
 
 ## 📝 라이선스
 
 본 프로젝트는 개인 학습 및 포트폴리오 목적으로 제작되었습니다.
-- 네이버 부동산 이용약관을 준수해야 합니다
-- 상업적 용도로 사용 불가
-- 크롤링한 데이터의 정확성은 보장되지 않습니다
+- 상업적 사용 불가
+- 크롤링 데이터 정확성 보장 안 됨
+- 네이버 부동산 이용약관 준수 필수
+
+---
+
+## 🤝 기여
+
+버그 리포트나 기능 제안은 GitHub Issues로 부탁드립니다.
+
+---
+
+<div align="center">
+
+**Made with ❤️ for Real Estate Investors**
+
+[시작하기](#-빠른-시작-5분) • [문서](docs/) • [문제 해결](#-문제-해결)
+
+</div>
